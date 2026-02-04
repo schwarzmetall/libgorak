@@ -1,0 +1,37 @@
+cmake_minimum_required(VERSION 3.18)
+
+include(CMakeDependentOption)
+
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_EXTENSIONS FALSE)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+project(libgorak LANGUAGES C)
+
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-Wall -Wextra -pedantic)
+    add_compile_options(-O3 -ffast-math)
+    add_compile_options(-march=native)
+else()
+    message(WARNING "please add optimization flags for your compiler (\"${CMAKE_C_COMPILER_ID}\")")
+endif()
+
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_util.h")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_char.h" "char.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_array.h" "array_find_int.c" "array_fill_int.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_date.h" "date_misc.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_timespec.h" "timespec_ms.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_fd.h" "readloop.c" "writeloop.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_tnt.h" "tnt.c" "trace_printf_default.c" "trace_printf_nolevel_default.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue.h")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_ptr.h" "queue_ptr.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_int.h" "queue_int.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_uint.h" "queue_uint.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threadpool.h" "threadpool.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threads.h" "mtx_timedlock_ms.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_fdset_input.h" "fdset_input.c")
+
+add_library(libgorak ${LIBGORAK_SOURCES})
+target_include_directories(libgorak PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+set_target_properties(libgorak PROPERTIES PREFIX "")
