@@ -86,9 +86,11 @@ extern volatile unsigned trace_output_level;
 
 #define TRAPNULL(ptr) TRAP(!ptr, ptr##_null, "null pointer: "#ptr)
 #define TRAPF(cond, func, fmt, ...) TRAP(cond, func, #func"(): "fmt, __VA_ARGS__)
+#define TRAPFS(cond, func, suffix, fmt, ...) TRAP(cond, func##_##suffix, #func"(): "fmt, __VA_ARGS__)
 
 #ifndef LGK_TRAP_NO_ERRNO
     #define TRAPFE(cond, func) TRAPF(cond, func, "%s", strerror(errno))
+    #define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", strerror(errno))
 #endif
 
 #define TRAP_SILENT(cond, label)\
