@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#ifndef LGK_TRAP_NO_ERRNO
+#ifndef LGK_TNT_NO_ERRNO
     #include <string.h>
     #include <errno.h>
 #endif
@@ -11,23 +11,31 @@
 #define JOIN(x,y) JOIN_AGAIN(x,y)
 #define JOIN_AGAIN(x,y) x##y
 
-#ifndef LGK_TRAP_LABEL_PREFIX
-    #define LGK_TRAP_LABEL_PREFIX trap
+#ifndef LGK_TNT_LABEL_PREFIX
+    #define LGK_TNT_LABEL_PREFIX trap
 #endif
 
-#ifndef LGK_TRACE_FULL_PATH
-    #define TRACE_FILE_NAME_MANGLE(x) trace_strip_path(x)
-const char *trace_strip_path(const char *path);
+#ifndef LGK_TNT_FULL_PATH
+    #define LGK_TNT_FILE_NAME_MANGLE(x) lgk_tnt_strip_path(x)
+const char *lgk_tnt_strip_path(const char *path);
 #else
-    #define TRACE_FILE_NAME_MANGLE(x) (x)
+    #define LGK_TNT_FILE_NAME_MANGLE(x) (x)
 #endif
 
-
-#ifndef LGK_TRACE_PRINTF_DEFAULT
-    #define LGK_TRACE_PRINTF_DEFAULT lgk_trace_printf_default
+#ifdef LGK_TNT_PRINT_DEFAULT_OVERRIDE
+    #define LGK_TNT_PRINT_DEFAULT LGK_TNT_PRINT_DEFAULT_OVERRIDE
+#else
+    #ifndef LGK_TNT_NO_LEVEL
+        #define LGK_TNT_PRINT_DEFAULT lgk_tnt_print_default
+    #else
+        #define LGK_TNT_PRINT_DEFAULT lgk_tnt_print_default_nolevel
+    #endif
 #endif
-#ifndef LGK_TRACE_PRINTF_DEFAULT_LEVEL
-    #define LGK_TRACE_PRINTF_DEFAULT_LEVEL lgk_trace_printf_default_level
+
+#ifdef LGK_TNT_TRAP_LABEL_PREFIX_OVERRIDE
+    #define LGK_TNT_TRAP_LABEL_PREFIX LGK_TNT_TRAP_LABEL_PREFIX_OVERRIDE
+#else
+    #define LGK_TNT_TRAP_LABEL_PREFIX trap
 #endif
 
 enum trace_level : uint_fast8_t
@@ -38,34 +46,39 @@ enum trace_level : uint_fast8_t
     TRACE_LEVEL_INFO,
     TRACE_LEVEL_DEBUG
 };
-typedef void trace_printf_nolevel_t(const char *file, unsigned line, const char *format, ...);
-typedef void trace_printf_t(const char *file, unsigned line, enum trace_level level, const char *format, ...);
+typedef void lgk_tnt_print_t(const char *file, unsigned line, enum trace_level level, const char *format, ...);
+typedef void lgk_tnt_print_nolevel_t(const char *file, unsigned line, const char *format, ...);
 
-trace_printf_nolevel_t LGK_TRACE_PRINTF_NOLEVEL_DEFAULT;
-trace_printf_t LGK_TRACE_PRINTF_DEFAULT;
+#ifndef LGK_TNT_NO_LEVEL
+lgk_tnt_print_t LGK_TNT_PRINT_DEFAULT;
+#else
+lgk_tnt_print_nolevel_t LGK_TNT_PRINT_DEFAULT;
+#endif
 
-#ifdef TRACE_OUTPUT_LEVEL_DYNAMIC
-    #define TRACE_OUTPUT_LEVEL trace_output_level
+#ifdef LGK_TNT_OUTPUT_LEVEL_DYNAMIC
+    #define LGK_TNT_OUTPUT_LEVEL trace_output_level
 extern volatile unsigned trace_output_level;
 #else
-    #ifndef TRACE_OUTPUT_LEVEL
-        #define TRACE_OUTPUT_LEVEL TRACE_LEVEL_DEBUG
+    #ifdef LGK_TNT_OUTPUT_LEVEL_STATIC
+	#define LGK_TNT_OUTPUT_LEVEL TRACE_LEVEL_##LGK_TNT_OUTPUT_LEVEL_STATIC
+    #else
+        #define LGK_TNT_OUTPUT_LEVEL TRACE_LEVEL_DEBUG
     #endif
 #endif
 
-#ifndef TRACE_NO_LEVEL_SUPPORT
-    #define TRACEP(level, printf, ...) if(level<=TRACE_OUTPUT_LEVEL) printf(TRACE_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__)
-    #define TRACE(level, ...) TRACEP(level, LGK_TRACE_PRINTF_DEFAULT, __VA_ARGS__)
-    #define TRAPLP(cond, label, level, printf, ...)\
+#ifndef LGK_TNT_NO_LEVEL
+    #define TRACEP(level, print, ...) if(level<=LGK_TNT_OUTPUT_LEVEL) print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__)
+    #define TRACE(level, ...) TRACEP(level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
+    #define TRAPLP(cond, label, level, print, ...)\
         if(cond)\
         {\
-            TRACEP(level, printf, __VA_ARGS__);\
-            goto JOIN(LGK_TRAP_LABEL_PREFIX, _##label);\
+            TRACEP(level, print, __VA_ARGS__);\
+            goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, _##label);\
         }
-    #define TRAPL(cond, label, level, ...) TRAPLP(cond, label, level, LGK_TRACE_PRINTF_DEFAULT, __VA_ARGS__)
-    #define TRAPP(cond, label, printf, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, printf, __VA_ARGS__)
-    #define TRAP(cond, label, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, LGK_TRACE_PRINTF_DEFAULT, __VA_ARGS__)
-    #ifndef TRACE_NO_LEVEL_SHORTS
+    #define TRAPL(cond, label, level, ...) TRAPLP(cond, label, level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
+    #define TRAPP(cond, label, print, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, print, __VA_ARGS__)
+    #define TRAP(cond, label, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
+    #ifndef LGK_TNT_NO_LEVEL_SHORTS
         #define DBG(...) TRACE(TRACE_LEVEL_DEBUG, __VA_ARGS__)
         #define INF(...) TRACE(TRACE_LEVEL_INFO, __VA_ARGS__)
         #define WRN(...) TRACE(TRACE_LEVEL_WARNING, __VA_ARGS__)
@@ -73,15 +86,15 @@ extern volatile unsigned trace_output_level;
         #define DBGVAR(var, fmt) DBG(#var"=="fmt, var)
     #endif
 #else
-    #define TRACEP(printf, ...) printf(TRACE_FILE_NAME_MANGLE(__FILE__), __LINE__, __VA_ARGS__)
-    #define TRACE(...) TRACEP(LGK_TRACE_PRINTF_NOLEVEL_DEFAULT, __VA_ARGS__)
-    #define TRAPP(cond, label, printf, ...)\
+    #define TRACEP(print, ...) print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, __VA_ARGS__)
+    #define TRACE(...) TRACEP(LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
+    #define TRAPP(cond, label, print, ...)\
         if(cond)\
         {\
-            TRACEP(printf, __VA_ARGS__);\
+            TRACEP(print, __VA_ARGS__);\
             goto TRAP_LABEL_PREFIX##_##label;\
         }
-    #define TRAP(cond, label, ...) TRAPP(cond, label, LGK_TRACE_PRINTF_NOLEVEL_DEFAULT, __VA_ARGS__)
+    #define TRAP(cond, label, ...) TRAPP(cond, label, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #endif
 
 #define TRAPNULL(ptr) TRAP(!ptr, ptr##_null, "null pointer: "#ptr)

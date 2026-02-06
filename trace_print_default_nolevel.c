@@ -3,7 +3,7 @@
 #include <lgk_tnt.h>
 #include <lgk_util.h>
 
-void lgk_trace_printf_nolevel_default(const char *file, unsigned line, const char *format, ...)
+void lgk_trace_print_default_nolevel(const char *file, unsigned line, const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);

@@ -10,7 +10,7 @@ static unsigned is_path_separator(char c)
     return 0;
 }
 
-const char *trace_strip_path(const char *path)
+const char *lgk_tnt_strip_path(const char *path)
 {
     const char *file = path;
     while(*path) if(is_path_separator(*(path++))) file = path;
