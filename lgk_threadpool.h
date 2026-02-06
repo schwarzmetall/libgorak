@@ -3,16 +3,15 @@
 
 #include <stdint.h>
 #include <threads.h>
+#include <lgk_threads.h>
 #include <lgk_queue_int.h>
 
-#define THREADPOOL_FLAG_UNTIMED 0x01
-
-#define THREADPOOL_STATIC(name, thread_buffer_size, queue_buffer_size)\
+#define THREADPOOL_STATIC(name, n_threads, pool_size)\
     struct threadpool name = { 0 };\
-    static thrd_t name##_thread_buffer[thread_buffer_size] = { 0 };\
-    static int name##_work_queue_buffer[queue_buffer_size] = { 0 };\
-    static int name##_work_pool_buffer[queue_buffer_size] = { 0 };\
-    static struct threadpool_work name##_work_buffer[queue_buffer_size] = { 0 };\
+    static struct lgk_thread name##_thread_buffer[n_threads] = { 0 };\
+    static int name##_work_queue_buffer[pool_size-n_threads] = { 0 };\
+    static int name##_work_pool_buffer[pool_size] = { 0 };\
+    static struct threadpool_work name##_work_buffer[pool_size] = { 0 };\
     static const struct threadpool_buffer_info name##_buffer_info =\
     {\
         name##_thread_buffer,\
@@ -25,7 +24,7 @@ typedef void threadpool_work_done_callback(void *work_data, int result);
 
 struct threadpool_buffer_info
 {
-    thrd_t *thread_buffer;
+    struct lgk_thread *thread_buffer;
     int *work_queue_buffer;
     int *work_pool_buffer;
     struct threadpool_work *work_buffer;
@@ -34,11 +33,13 @@ struct threadpool_buffer_info
 struct threadpool
 {
     unsigned n_threads;
-    thrd_t *thread_buffer;
+    unsigned pool_size;
+    struct lgk_monitor monitor;
+    struct lgk_thread *thread_buffer;
     struct threadpool_work *work_buffer;
     struct queue_int work_queue;
     struct queue_int work_pool;
-    uint_fast8_t close;
+    int queue_timeout_ms;
 };
 
 struct threadpool_work
@@ -48,8 +49,9 @@ struct threadpool_work
     void *data;
 };
 
-int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, uint_fast8_t flags);
-void threadpool_close(struct threadpool *tp);
+// NOTE: queue buffer must have size (pool_size-n_threads)
+int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned pool_size, int_fast8_t timed_join, int queue_timeout_ms);
+int threadpool_close(struct threadpool *tp, int join_timeout_ms, int_fast8_t timeout_detach);
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data);
 
 #endif

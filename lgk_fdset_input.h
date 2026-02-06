@@ -1,8 +1,10 @@
 #ifndef FDSET_INPUT_H
 #define FDSET_INPUT_H
 
+#include <stdint.h>
 #include <threads.h>
 #include <poll.h>
+#include <lgk_threads.h>
 
 #define FDSET_INPUT_STATIC(name, nmax)\
     struct fdset_input name;\
@@ -18,11 +20,21 @@ enum fdset_input_callback_action : uint_fast8_t
     N_FDSET_INPUT_CALLBACK_ACTIONS
 };
 
-typedef enum fdset_input_callback_action fdset_input_callback(int fd, void *buf, unsigned nbuf, int_fast8_t err);
+enum fdset_input_error : uint_fast8_t
+{
+    FDSET_INPUT_ERROR_NONE = 0,
+    FDSET_INPUT_ERROR_POLL,
+    FDSET_INPUT_ERROR_READ,
+
+    N_FDSET_INPUT_ERRORS
+};
+
+typedef enum fdset_input_callback_action fdset_input_callback(int fd, void *buf, unsigned nbuf, enum fdset_input_error err, void *arg);
 
 struct fdset_input_fd_info
 {
     fdset_input_callback *callback;
+    void *arg;
     unsigned buffer_size;
     unsigned buffer_used;
     void *buffer;
@@ -34,6 +46,7 @@ struct fdset_input
     struct pollfd *pollfd_buffer;
     unsigned nmax;
     unsigned nused;
+    int timeout_ms;
     union
     {
         int pipefd[2];
@@ -44,12 +57,15 @@ struct fdset_input
         };
     };
     mtx_t mutex;
-    thrd_t thread;
+    struct lgk_thread thread;
+    struct lgk_monitor thread_mon;
+    int_fast8_t close;
 };
 
-int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax);
-int fdset_input_close(struct fdset_input *fi, int *thread_res);
-int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb);
+/* pollfd_buffer must have length at least nmax + 1 (one element for the internal pipe). */
+int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax, int timeout_ms);
+int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach);
+int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb, void *arg);
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd);
 
 #endif
