@@ -2,14 +2,12 @@
 #define LGK_TNT_H
 
 #include <stdint.h>
+#include <lgk_util.h>
 
 #ifndef LGK_TNT_NO_ERRNO
     #include <string.h>
     #include <errno.h>
 #endif
-
-#define JOIN(x,y) JOIN_AGAIN(x,y)
-#define JOIN_AGAIN(x,y) x##y
 
 #ifndef LGK_TNT_LABEL_PREFIX
     #define LGK_TNT_LABEL_PREFIX trap
@@ -60,7 +58,7 @@ lgk_tnt_print_nolevel_t LGK_TNT_PRINT_DEFAULT;
 extern volatile unsigned trace_output_level;
 #else
     #ifdef LGK_TNT_OUTPUT_LEVEL_STATIC
-	#define LGK_TNT_OUTPUT_LEVEL TRACE_LEVEL_##LGK_TNT_OUTPUT_LEVEL_STATIC
+	#define LGK_TNT_OUTPUT_LEVEL JOIN(TRACE_LEVEL_,LGK_TNT_OUTPUT_LEVEL_STATIC)
     #else
         #define LGK_TNT_OUTPUT_LEVEL TRACE_LEVEL_DEBUG
     #endif
@@ -73,7 +71,7 @@ extern volatile unsigned trace_output_level;
         if(cond)\
         {\
             TRACEP(level, print, __VA_ARGS__);\
-            goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, _##label);\
+            goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
         }
     #define TRAPL(cond, label, level, ...) TRAPLP(cond, label, level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
     #define TRAPP(cond, label, print, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, print, __VA_ARGS__)
@@ -92,7 +90,7 @@ extern volatile unsigned trace_output_level;
         if(cond)\
         {\
             TRACEP(print, __VA_ARGS__);\
-            goto TRAP_LABEL_PREFIX##_##label;\
+            goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
         }
     #define TRAP(cond, label, ...) TRAPP(cond, label, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #endif
@@ -101,7 +99,7 @@ extern volatile unsigned trace_output_level;
 #define TRAPF(cond, func, fmt, ...) TRAP(cond, func, #func"(): "fmt, __VA_ARGS__)
 #define TRAPFS(cond, func, suffix, fmt, ...) TRAP(cond, func##_##suffix, #func"(): "fmt, __VA_ARGS__)
 
-#ifndef LGK_TRAP_NO_ERRNO
+#ifndef LGK_TNT_NO_ERRNO
     #define TRAPFE(cond, func) TRAPF(cond, func, "%s", strerror(errno))
     #define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", strerror(errno))
 #endif
@@ -109,7 +107,7 @@ extern volatile unsigned trace_output_level;
 #define TRAP_SILENT(cond, label)\
     if(cond)\
     {\
-        goto TRAP_LABEL_PREFIX##_##label;\
+        goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
     }
 
 #endif
