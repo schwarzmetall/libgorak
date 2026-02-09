@@ -4,8 +4,12 @@
 #define _JOIN_FINAL(a,b) a##b
 #define JOIN(a,b) _JOIN_FINAL(a,b)
 #define ASIZE(a) (sizeof(a)/sizeof(a[0]))
+#ifndef MIN
 #define MIN(a,b) ((a<b)?(a):(b))
+#endif
+#ifndef MAX
 #define MAX(a,b) ((a>b)?(a):(b))
+#endif
 #define BITEXTRACT(value, basename) (((value) & basename##_MASK) >> basename##_SHIFT)
 
 #endif
