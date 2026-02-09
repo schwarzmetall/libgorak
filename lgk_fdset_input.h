@@ -34,6 +34,8 @@ struct fdset_input
     struct pollfd *pollfd_buffer;
     unsigned nmax;
     unsigned nused;
+    unsigned poll_timeout_ms;
+    unsigned lock_timeout_ms;
     union
     {
         int pipefd[2];
@@ -47,7 +49,7 @@ struct fdset_input
     thrd_t thread;
 };
 
-int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax);
+int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax, unsigned poll_timeout_ms, unsigned lock_timeout_ms);
 int fdset_input_close(struct fdset_input *fi, int *thread_res);
 int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb);
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd);

@@ -39,6 +39,7 @@ struct threadpool
     struct queue_int work_queue;
     struct queue_int work_pool;
     uint_fast8_t close;
+    unsigned timeout_ms;
 };
 
 struct threadpool_work
@@ -48,7 +49,7 @@ struct threadpool_work
     void *data;
 };
 
-int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, uint_fast8_t flags);
+int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, uint_fast8_t flags, unsigned timeout_ms);
 void threadpool_close(struct threadpool *tp);
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data);
 

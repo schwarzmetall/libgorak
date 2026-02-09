@@ -5,13 +5,7 @@
 #include <lgk_threads.h>
 #include <lgk_fdset_input.h>
 
-#ifndef FDSET_INPUT_POLL_TIMEOUT
-    #define FDSET_INPUT_POLL_TIMEOUT_MS 1000
-#endif
-
-#ifndef FDSET_INPUT_LOCK_TIMEOUT
-    #define FDSET_INPUT_LOCK_TIMEOUT_MS 1000
-#endif
+#define FDSET_INPUT_DEFAULT_TIMEOUT_MS 1000
 
 constexpr uint8_t THREAD_CMD_RUN = 0;
 constexpr uint8_t THREAD_CMD_PAUSE = 1;
@@ -57,16 +51,16 @@ static int fdset_input_thread(void *data)
         {
             read(fi->pipefd_read, &cmd, 1);
         }
-        int err = mtx_timedlock_ms(&fi->mutex, FDSET_INPUT_LOCK_TIMEOUT_MS);
+        int err = mtx_timedlock_ms(&fi->mutex, fi->lock_timeout_ms);
         TRAPF(err!=thrd_success, mtx_timedlock_ms, "%i", err);
-        int nevents = poll(fi->pollfd_buffer, fi->nused+1, FDSET_INPUT_POLL_TIMEOUT_MS);
+        int nevents = poll(fi->pollfd_buffer, fi->nused+1, (int)fi->poll_timeout_ms);
         TRAPFE(nevents<0, poll);
         short pipe_revents = fi->pollfd_buffer[0].revents;
         if(pipe_revents)
         {
             if(pipe_revents & POLLHUP) exit = -1;
             if(pipe_revents | POLLIN) read(fi->pipefd_read, &cmd, 1);
-            if(pipe_revents & ERRMASK) ERR("errors reported ion pipe_revents: %04hx", pipe_revents);
+            if(pipe_revents & ERRMASK) ERR("errors reported in pipe_revents: %04hx", pipe_revents);
             if(pipe_revents & ~(ERRMASK | POLLIN)) ERR("unhandled flags in pipe_revents: %04hx", pipe_revents);
             nevents--;
         }
@@ -102,13 +96,15 @@ trap_mtx_timedlock_ms:
 }
 
 // TODO: DOC pollfd_buffer size has to be nmax+1 (one element for pipe)
-int fdset_input_init(struct fdset_input *const fi, struct fdset_input_fd_info *const fd_info_buffer, struct pollfd *const pollfd_buffer, unsigned nmax)
+int fdset_input_init(struct fdset_input *const fi, struct fdset_input_fd_info *const fd_info_buffer, struct pollfd *const pollfd_buffer, unsigned nmax, unsigned poll_timeout_ms, unsigned lock_timeout_ms)
 {
     TRAP(!nmax, nmax, "nmax==%i", nmax);
     fi->fd_info_buffer = fd_info_buffer;
     fi->pollfd_buffer = pollfd_buffer;
     fi->nmax = nmax;
     fi->nused = 0;
+    fi->poll_timeout_ms = (poll_timeout_ms == 0) ? FDSET_INPUT_DEFAULT_TIMEOUT_MS : poll_timeout_ms;
+    fi->lock_timeout_ms = (lock_timeout_ms == 0) ? FDSET_INPUT_DEFAULT_TIMEOUT_MS : lock_timeout_ms;
     int err = pipe(fi->pipefd);
     TRAPFE(err, pipe);
     pollfd_buffer[0] = (struct pollfd){fi->pipefd_read, POLLIN, 0};
@@ -143,7 +139,7 @@ int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsig
     TRAP(fi->nused >= fi->nmax, full, "nmax==%i, nused==%i", fi->nmax, fi->nused);
     uint8_t cmd = THREAD_CMD_PAUSE;
     write(fi->pipefd_write, &cmd, 1);
-    int err = mtx_timedlock_ms(&fi->mutex, FDSET_INPUT_LOCK_TIMEOUT_MS);
+    int err = mtx_timedlock_ms(&fi->mutex, fi->lock_timeout_ms);
     TRAPF(err!=thrd_success, mtx_timedlock_ms, "%i", err);
     int index = fi->nused++;
     fi->fd_info_buffer[index] = (struct fdset_input_fd_info){cb, bufsize, 0, buffer};
@@ -166,7 +162,7 @@ int fdset_input_async_remove_fd(struct fdset_input *fi, int fd)
     TRAP(index>=fi->nmax, invalid_fd, "invalid fd: %i", fd);
     uint8_t cmd = THREAD_CMD_PAUSE;
     write(fi->pipefd_write, &cmd, 1);
-    int err = mtx_timedlock_ms(&fi->mutex, FDSET_INPUT_LOCK_TIMEOUT_MS);
+    int err = mtx_timedlock_ms(&fi->mutex, fi->lock_timeout_ms);
     TRAPF(err!=thrd_success, mtx_timedlock_ms, "%i", err);
     fi->pollfd_buffer[index+1] = fi->pollfd_buffer[fi->nused--];
     fi->fd_info_buffer[index] = fi->fd_info_buffer[fi->nused];

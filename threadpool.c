@@ -5,7 +5,7 @@
 #include <lgk_queue_int.h>
 #include <lgk_threadpool.h>
 
-#define TIMEOUT_DEFAULT_MS (10*1000) // TODO configurable timeout
+#define THREADPOOL_TIMEOUT_DEFAULT_MS (10*1000)
 
 static int worker_thread_function(void *data)
 {
@@ -14,13 +14,13 @@ static int worker_thread_function(void *data)
     while(!tp->close)
     {
         int i_work;
-        status = queue_int_pop(&tp->work_queue, &i_work, 0/* FIXME TIMEOUT_DEFAULT_MS */);
+        status = queue_int_pop(&tp->work_queue, &i_work, 0/* TODO: tp->timeout_ms? */);
         if(status == thrd_timedout) continue;
         TRAPF(status!=thrd_success, queue_int_pop, "%i", status);
         if(i_work < 0) break;
         struct threadpool_work *work = tp->work_buffer + i_work;
         work->done_callback(work->data, work->start(work->data));
-        status = queue_int_push(&tp->work_pool, i_work, TIMEOUT_DEFAULT_MS);
+        status = queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
         TRAPF(status!=thrd_success, queue_int_push, "%i", status);
     }
     return thrd_success;
@@ -29,8 +29,9 @@ trap_queue_int_pop:
     return thrd_error;
 }
 
-int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, uint_fast8_t flags)
+int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, uint_fast8_t flags, unsigned timeout_ms)
 {
+    tp->timeout_ms = (timeout_ms) ? timeout_ms : THREADPOOL_TIMEOUT_DEFAULT_MS;
     uint_fast8_t flags_queue = (flags & THREADPOOL_FLAG_UNTIMED) ? QUEUE_FLAG_UNTIMED : 0;
     int status = queue_int_init(&tp->work_queue, buffer_info->work_queue_buffer, queue_size, flags_queue);
     TRAPF(status!=thrd_success, queue_init, "%i", status);
@@ -50,7 +51,7 @@ int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *
     return thrd_success;
 trap_thrd_create:
     tp->close = 1;
-    for(unsigned i_exit=0; i_exit<i; i_exit++) queue_int_push(&tp->work_queue, -1, TIMEOUT_DEFAULT_MS);
+    for(unsigned i_exit=0; i_exit<i; i_exit++) queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
     for(unsigned i_exit=0; i_exit<i; i_exit++) thrd_join(tp->thread_buffer[i], NULL);
     queue_int_close(&tp->work_pool);
 trap_queue_int_init_prefilled:
@@ -63,7 +64,7 @@ trap_queue_init:
 void threadpool_close(struct threadpool *tp)
 {
     tp->close = 1;
-    for(unsigned i=0; i<tp->n_threads; i++) queue_int_push(&tp->work_queue, -1, TIMEOUT_DEFAULT_MS);
+    for(unsigned i=0; i<tp->n_threads; i++) queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
     for(unsigned i=0; i<tp->n_threads; i++)
     {
         int status_work;
@@ -76,17 +77,17 @@ void threadpool_close(struct threadpool *tp)
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data)
 {
     int i_work;
-    int status = queue_int_pop(&tp->work_pool, &i_work, TIMEOUT_DEFAULT_MS);
+    int status = queue_int_pop(&tp->work_pool, &i_work, tp->timeout_ms);
     TRAPF(status!=thrd_success, queue_int_pop, "%i", status);
     struct threadpool_work *work = tp->work_buffer + i_work;
     work->start = start;
     work->done_callback = work_done_cb;
     work->data = work_data;
-    status = queue_int_push(&tp->work_queue, i_work, TIMEOUT_DEFAULT_MS);
+    status = queue_int_push(&tp->work_queue, i_work, tp->timeout_ms);
     TRAPF(status!=thrd_success, queue_int_push, "%i", status);
     return thrd_success;
 trap_queue_int_push:
-    queue_int_push(&tp->work_pool, i_work, TIMEOUT_DEFAULT_MS);
+    queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
 trap_queue_int_pop:
     return status;
 }
