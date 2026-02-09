@@ -3,7 +3,7 @@
 #include <lgk_tnt.h>
 #include <lgk_util.h>
 
-void lgk_trace_print_default(const char *file, unsigned line, enum trace_level level, const char *format, ...)
+void lgk_tnt_print_default(const char *file, unsigned line, enum trace_level level, const char *format, ...)
 {
     static const char *const level_tags[] = {"TRP", "ERR", "WRN", "INF", "DBG"};
     static const char *const tag_fallback = "INV";

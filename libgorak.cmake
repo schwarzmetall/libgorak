@@ -1,0 +1,42 @@
+# libgorak.cmake - Consumer-only configuration for libgorak
+#
+# This script is for projects that link against libgorak. Do NOT include it
+# when building libgorak itself. It defines configuration options (with defaults)
+# and a helper to apply them as compile definitions to targets that include
+# lgk_tnt.h. It does not create or build any library.
+
+# TNT / lgk_tnt options (defaults shall match lgk_tnt.h)
+option(LGK_TNT_NO_ERRNO "don't add errno-aware macros (removes errno.h and string.h dependencies)" OFF)
+option(LGK_TNT_NO_LEVEL "don't support trace message levels" OFF)
+option(LGK_TNT_NO_LEVEL_SHORTS "don't add shorthand macros (DBG,INF,WARN,...)" OFF)
+option(LGK_TNT_FULL_PATH "use full path in trace output" OFF)
+option(LGK_TNT_OUTPUT_LEVEL_DYNAMIC "make trace level runtime-configurable" OFF)
+set(LGK_TNT_OUTPUT_LEVEL_STATIC "DEBUG" CACHE STRING "static trace output level (TRAP, ERROR, WARNING, INFO, DEBUG)")
+set(LGK_TNT_PRINT_DEFAULT_OVERRIDE "" CACHE STRING "override default function for error output")
+set(LGK_TNT_TRAP_LABEL_PREFIX_OVERRIDE "" CACHE STRING "prefix for trap labels")
+
+function(libgorak_apply_header_options target)
+    if (LGK_TNT_NO_ERRNO)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_NO_ERRNO)
+    endif()
+    if (LGK_TNT_NO_LEVEL)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_NO_LEVEL)
+    endif()
+    if (LGK_TNT_NO_LEVEL_SHORTS)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_NO_LEVEL_SHORTS)
+    endif()
+    if (LGK_TNT_FULL_PATH)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_FULL_PATH)
+    endif()
+    if (LGK_TNT_OUTPUT_LEVEL_DYNAMIC)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_OUTPUT_LEVEL_DYNAMIC)
+    else()
+        target_compile_definitions(${target} PRIVATE LGK_TNT_OUTPUT_LEVEL_STATIC=${LGK_TNT_OUTPUT_LEVEL_STATIC})
+    endif()
+    if (LGK_TNT_TRAP_LABEL_PREFIX_OVERRIDE)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_TRAP_LABEL_PREFIX_OVERRIDE=${LGK_TNT_TRAP_LABEL_PREFIX_OVERRIDE})
+    endif()
+    if (LGK_TNT_PRINT_DEFAULT_OVERRIDE)
+        target_compile_definitions(${target} PRIVATE LGK_TNT_PRINT_DEFAULT_OVERRIDE=${LGK_TNT_PRINT_DEFAULT_OVERRIDE})
+    endif()
+endfunction()
