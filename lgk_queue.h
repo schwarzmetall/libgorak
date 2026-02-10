@@ -73,6 +73,7 @@
         mtx_destroy(&q->mutex);\
     }\
     \
+    /* For waiting with timeout, use queue_##name##_timedwait_write. */\
     static int queue_##name##_wait_write(struct queue_##name *q, type_size min_free)\
     {\
         int status = mtx_lock(&q->mutex);\
@@ -123,6 +124,7 @@
         return thrd_error;\
     }\
     \
+    /* For waiting with timeout, use queue_##name##_timedwait_read. */\
     static int queue_##name##_wait_read(struct queue_##name *q)\
     {\
         int status = mtx_lock(&q->mutex);\
@@ -154,7 +156,7 @@
     sclass int queue_##name##_pop(struct queue_##name *q, type_data *item, unsigned timeout_ms)\
     {\
         int status = timeout_ms ? queue_##name##_timedwait_read(q, timeout_ms) : queue_##name##_wait_read(q);\
-        TRAPF(status==thrd_error, queue_##name#_timedwait_read, "%i", status);\
+        TRAPF(status==thrd_error, queue_##name##_timedwait_read, "%i", status);\
         if(status == thrd_success)\
         {\
             *item = q->buffer[q->i_read++];\
