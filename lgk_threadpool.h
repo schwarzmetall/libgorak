@@ -50,7 +50,7 @@ struct threadpool_work
 };
 
 int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, uint_fast8_t flags, unsigned timeout_ms);
-void threadpool_close(struct threadpool *tp);
+int threadpool_close(struct threadpool *tp);
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data);
 
 #endif

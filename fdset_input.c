@@ -102,7 +102,6 @@ trap_read_pipe_wait:
     return -1;
 }
 
-// TODO: DOC pollfd_buffer size has to be nmax+1 (one element for pipe)
 int fdset_input_init(struct fdset_input *const fi, struct fdset_input_fd_info *const fd_info_buffer, struct pollfd *const pollfd_buffer, unsigned nmax, unsigned poll_timeout_ms, unsigned lock_timeout_ms)
 {
     TRAP(!nmax, nmax, "nmax==%i", nmax);
@@ -143,7 +142,7 @@ trap_thrd_join:
 
 int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb)
 {
-    TRAP(fi->nused >= fi->nmax, full, "nmax==%i, nused==%i", fi->nmax, fi->nused);
+    TRAP(fi->nused >= fi->nmax, full, "nmax==%u, nused==%u", fi->nmax, fi->nused);
     uint8_t cmd = THREAD_CMD_PAUSE;
     ssize_t nwritten = write(fi->pipefd_write, &cmd, 1);
     TRAPFES(nwritten != 1, write, pause);
@@ -167,7 +166,7 @@ trap_full:
 
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd)
 {
-    // TODO TRAP(fi->nmax >= fi->nused, full, "nmax==%i, nused==%i", c->nmax, c->nused);
+    TRAP(!fi->nused, empty, "nused==%u", fi->nused);
     unsigned index;
     for(index=0; index<fi->nmax; index++) if(fi->pollfd_buffer[index+1].fd == fd) break;
     TRAP(index>=fi->nmax, invalid_fd, "invalid fd: %i", fd);
@@ -188,5 +187,6 @@ trap_mtx_unlock:
 trap_mtx_timedlock_ms:
 trap_write_pause:
 trap_invalid_fd:
+trap_empty:
     return -1;
 }

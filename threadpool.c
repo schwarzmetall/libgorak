@@ -14,7 +14,7 @@ static int worker_thread_function(void *data)
     while(!tp->close)
     {
         int i_work;
-        status = queue_int_pop(&tp->work_queue, &i_work, 0/* TODO: tp->timeout_ms? */);
+        status = queue_int_pop(&tp->work_queue, &i_work, tp->timeout_ms);
         if(status == thrd_timedout) continue;
         TRAPF(status!=thrd_success, queue_int_pop, "%i", status);
         if(i_work < 0) break;
@@ -53,13 +53,13 @@ trap_thrd_create:
     tp->close = 1;
     for(unsigned i_exit=0; i_exit<i; i_exit++)
     {
-        int push_ret = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
-        if(push_ret != thrd_success) ERRF(queue_int_push, "%i", push_ret);
+        int status_push = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
+        if(status_push != thrd_success) ERRF(queue_int_push, "%i", status_push);
     }
     for(unsigned i_exit=0; i_exit<i; i_exit++)
     {
-        int join_ret = thrd_join(tp->thread_buffer[i], NULL);
-        if(join_ret != thrd_success) ERRF(thrd_join, "%i", join_ret);
+        int status_join = thrd_join(tp->thread_buffer[i], NULL);
+        if(status_join != thrd_success) ERRF(thrd_join, "%i", status_join);
     }
     queue_int_close(&tp->work_pool);
 trap_queue_int_init_prefilled:
@@ -68,22 +68,35 @@ trap_queue_int_init:
     return status;
 }
 
-// TODO: return status
-void threadpool_close(struct threadpool *tp)
+int threadpool_close(struct threadpool *tp)
 {
+    int status = thrd_success;
     tp->close = 1;
     for(unsigned i=0; i<tp->n_threads; i++)
     {
-        int push_ret = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
-        if(push_ret != thrd_success) ERRF(queue_int_push, "%i", push_ret);
+        int status_push = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
+        if(status_push != thrd_success)
+        {
+            if(status == thrd_success) status = status_push;
+            ERRF(queue_int_push, "%i", status_push);
+        }
     }
     for(unsigned i=0; i<tp->n_threads; i++)
     {
         int status_work;
-        int status = thrd_join(tp->thread_buffer[i], &status_work);
-        if(status != thrd_success) ERRF(thrd_join, "%i", status);
-        if(status_work != thrd_success) ERR("joined worker thread %u: %i", i, status_work);
+        int status_join = thrd_join(tp->thread_buffer[i], &status_work);
+        if(status_join != thrd_success)
+        {
+            if(status == thrd_success) status = status_join;
+            ERRF(thrd_join, "%i", status_join);
+        }
+        if(status_work != thrd_success)
+        {
+            if(status == thrd_success) status = status_work;
+	    ERR("joined worker thread %u: %i", i, status_work);
+        }
     }
+    return status;
 }
 
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data)
@@ -100,8 +113,8 @@ int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpo
     return thrd_success;
 trap_queue_int_push:
     {
-        int putback_ret = queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
-        if(putback_ret != thrd_success) ERRF(queue_int_push, "%i", putback_ret);
+        int status_putback = queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
+        if(status_putback != thrd_success) ERRF(queue_int_push, "%i", status_putback);
     }
 trap_queue_int_pop:
     return status;
