@@ -15,7 +15,7 @@ void timespec_offset_ms(struct timespec *ts, int offset_ms)
 int timespec_get_offset_ms(struct timespec *ts, int base, int offset_ms)
 {
     int status = timespec_get(ts, base);
-    TRAP(status!=base, timespec_get, "timespec_get(%i): %i", base, status);
+    TRAPF(status!=base, timespec_get, "%i", base, status);
     timespec_offset_ms(ts, offset_ms);
     return status;
 trap_timespec_get:

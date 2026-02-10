@@ -71,12 +71,18 @@ extern volatile unsigned trace_output_level;
 #define TRAPL(cond, label, level, ...) TRAPLP(cond, label, level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #define TRAPP(cond, label, print, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, print, __VA_ARGS__)
 #define TRAP(cond, label, ...) TRAPLP(cond, label, TRACE_LEVEL_TRAP, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
-#ifndef LGK_TNT_NO_LEVEL_SHORTS
+#ifndef LGK_TNT_NO_TRACE_SHORTS
     #define DBG(...) TRACE(TRACE_LEVEL_DEBUG, __VA_ARGS__)
     #define INF(...) TRACE(TRACE_LEVEL_INFO, __VA_ARGS__)
     #define WRN(...) TRACE(TRACE_LEVEL_WARNING, __VA_ARGS__)
     #define ERR(...) TRACE(TRACE_LEVEL_ERROR, __VA_ARGS__)
     #define DBGVAR(var, fmt) DBG(#var"=="fmt, var)
+    #define ERRF(func, fmt, ...) ERR(#func"(): "fmt, __VA_ARGS__)
+    #ifndef LGK_TNT_NO_ERRNO
+        #define ERRFE(func) ERR(#func"(): %s", strerror(errno))
+    #else
+        #define ERRFE(func) ERR(#func"(): failed")
+    #endif
 #endif
 
 #define TRAPNULL(ptr) TRAP(!ptr, ptr##_null, "null pointer: "#ptr)

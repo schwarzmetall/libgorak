@@ -37,11 +37,11 @@
         q->size = size;\
         q->used = q->i_read = q->i_write = 0;\
         int status = mtx_init(&q->mutex, (flags & QUEUE_FLAG_UNTIMED) ? mtx_plain : mtx_timed);\
-        TRAP(status!=thrd_success, mtx_init, "mtx_init(): %i", status);\
+        TRAPF(status!=thrd_success, mtx_init, "%i", status);\
         status = cnd_init(&q->cnd_readable);\
-        TRAP(status!=thrd_success, cnd_init_readable, "cnd_init(): %i", status);\
+        TRAPFS(status!=thrd_success, cnd_init, readable, "%i", status);\
         status = cnd_init(&q->cnd_writable);\
-        TRAP(status!=thrd_success, cnd_init_writable, "cnd_init(): %i", status);\
+        TRAPFS(status!=thrd_success, cnd_init, writable, "%i", status);\
         return thrd_success;\
     trap_cnd_init_writable:\
         cnd_destroy(&q->cnd_readable);\
@@ -76,9 +76,9 @@
     static int queue_##name##_wait_write(struct queue_##name *q, type_size min_free)\
     {\
         int status = mtx_lock(&q->mutex);\
-        TRAP(status==thrd_error, mtx_lock, "mtx_lock(): %i", status);\
+        TRAPF(status==thrd_error, mtx_lock, "%i", status);\
         while((status == thrd_success) && ((q->size - q->used) < min_free)) status = cnd_wait(&q->cnd_writable, &q->mutex);\
-        TRAP(status==thrd_error, cnd_wait, "cnd_wait(): %i", status);\
+        TRAPF(status==thrd_error, cnd_wait, "%i", status);\
         return status;\
     trap_cnd_wait:\
     trap_mtx_lock:\
@@ -88,15 +88,16 @@
     static int queue_##name##_timedwait_write(struct queue_##name *q, type_size min_free, unsigned timeout_ms)\
     {\
         struct timespec ts;\
-        timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms);\
-        /*TODO error reporting */\
+        int status_ts = timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms);\
+        TRAPF(status_ts != TIME_UTC, timespec_get_offset_ms, "%i", status_ts);\
         int status = mtx_timedlock(&q->mutex, &ts);\
-        TRAP(status==thrd_error, mtx_timedlock, "mtx_timedlock(): %i", status);\
+        TRAPF(status==thrd_error, mtx_timedlock, "%i", status);\
         while((status == thrd_success) && ((q->size - q->used) < min_free)) status = cnd_timedwait(&q->cnd_writable, &q->mutex, &ts);\
-        TRAP(status==thrd_error, cnd_timedwait, "cnd_timedwait(): %i", status);\
+        TRAPF(status==thrd_error, cnd_timedwait, "%i", status);\
         return status;\
     trap_cnd_timedwait:\
     trap_mtx_timedlock:\
+    trap_timespec_get_offset_ms:\
         return thrd_error;\
     }\
     \
@@ -110,9 +111,9 @@
             if(q->i_write > q->size) q->i_write = 0;\
             q->used++;\
             status = cnd_signal(&q->cnd_readable);\
-            TRAP(status==thrd_error, cnd_signal, "cnd_signal(): %i", status);\
+            TRAPF(status==thrd_error, cnd_signal, "%i", status);\
             status = mtx_unlock(&q->mutex);\
-            TRAP(status==thrd_error, mtx_unlock, "mtx_unlock(): %i", status);\
+            TRAPF(status==thrd_error, mtx_unlock, "%i", status);\
         }\
         return status;\
     trap_mtx_unlock:\
@@ -125,9 +126,9 @@
     static int queue_##name##_wait_read(struct queue_##name *q)\
     {\
         int status = mtx_lock(&q->mutex);\
-        TRAP(status==thrd_error, mtx_lock, "mtx_lock(): %i", status);\
-        while((status == thrd_success) && (q->used == 0)) status = cnd_wait(&q->cnd_readable, &q->mutex);\
-        TRAP(status==thrd_error, cnd_wait, "cnd_wait(): %i", status);\
+        TRAPF(status==thrd_error, mtx_lock, "%i", status);\
+        while((status == thrd_success) && !q->used) status = cnd_wait(&q->cnd_readable, &q->mutex);\
+        TRAPF(status==thrd_error, cnd_wait, "%i", status);\
         return status;\
     trap_cnd_wait:\
     trap_mtx_lock:\
@@ -137,37 +138,38 @@
     static int queue_##name##_timedwait_read(struct queue_##name *q, unsigned timeout_ms)\
     {\
         struct timespec ts;\
-        timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms);\
-        /*TODO error reporting */\
+        int status_ts = timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms);\
+        TRAPF(status_ts != TIME_UTC, timespec_get_offset_ms, "%i", status_ts);\
         int status = mtx_timedlock(&q->mutex, &ts);\
-        TRAP(status==thrd_error, mtx_timedlock, "mtx_timedlock(): %i", status);\
-        while((status == thrd_success) && (q->used == 0)) status = cnd_timedwait(&q->cnd_readable, &q->mutex, &ts);\
-        TRAP(status==thrd_error, cnd_timedwait, "cnd_timedwait(): %i", status);\
+        TRAPF(status==thrd_error, mtx_timedlock, "%i", status);\
+        while((status == thrd_success) && !q->used) status = cnd_timedwait(&q->cnd_readable, &q->mutex, &ts);\
+        TRAPF(status==thrd_error, cnd_timedwait, "%i", status);\
         return status;\
     trap_cnd_timedwait:\
     trap_mtx_timedlock:\
+    trap_timespec_get_offset_ms:\
         return thrd_error;\
     }\
     \
     sclass int queue_##name##_pop(struct queue_##name *q, type_data *item, unsigned timeout_ms)\
     {\
         int status = timeout_ms ? queue_##name##_timedwait_read(q, timeout_ms) : queue_##name##_wait_read(q);\
-        TRAP(status==thrd_error, queue_timedwait_read, "queue_"#name"_timedwait_read(): %i", status);\
+        TRAPF(status==thrd_error, queue_##name#_timedwait_read, "%i", status);\
         if(status == thrd_success)\
         {\
             *item = q->buffer[q->i_read++];\
             if(q->i_read > q->size) q->i_read = 0;\
             q->used--;\
             status = cnd_signal(&q->cnd_writable);\
-            TRAP(status==thrd_error, cnd_signal, "cnd_signal(): %i", status);\
+            TRAPF(status==thrd_error, cnd_signal, "%i", status);\
             status = mtx_unlock(&q->mutex);\
-            TRAP(status==thrd_error, mtx_unlock, "mtx_unlock(): %i", status);\
+            TRAPF(status==thrd_error, mtx_unlock, "%i", status);\
         }\
         return status;\
     trap_mtx_unlock:\
     trap_cnd_signal:\
         mtx_unlock(&q->mutex);\
-    trap_queue_timedwait_read:\
+    trap_queue_##name##_timedwait_read:\
         return thrd_error;\
     }
 

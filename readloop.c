@@ -1,3 +1,4 @@
+/* readloop/writeloop are currently broken (loop bug and error handling) and need to be fixed or rewritten. */
 #include <stdint.h>
 #include <unistd.h>
 #include <lgk_fd.h>

@@ -1,3 +1,4 @@
+/* There is no fallback error reporting path: if fprintf/vfprintf to stderr fails, it is not reported elsewhere. */
 #include <stdarg.h>
 #include <stdio.h>
 #include <lgk_tnt.h>

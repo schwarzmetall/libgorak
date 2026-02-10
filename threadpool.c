@@ -34,7 +34,7 @@ int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *
     tp->timeout_ms = (timeout_ms) ? timeout_ms : THREADPOOL_TIMEOUT_DEFAULT_MS;
     uint_fast8_t flags_queue = (flags & THREADPOOL_FLAG_UNTIMED) ? QUEUE_FLAG_UNTIMED : 0;
     int status = queue_int_init(&tp->work_queue, buffer_info->work_queue_buffer, queue_size, flags_queue);
-    TRAPF(status!=thrd_success, queue_init, "%i", status);
+    TRAPF(status!=thrd_success, queue_int_init, "%i", status);
     for(unsigned i=0; i<queue_size; i++) buffer_info->work_pool_buffer[i] = i;
     status = queue_int_init_prefilled(&tp->work_pool, buffer_info->work_pool_buffer, queue_size, queue_size, flags_queue);
     TRAPF(status!=thrd_success, queue_int_init_prefilled, "%i", status);
@@ -51,12 +51,20 @@ int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *
     return thrd_success;
 trap_thrd_create:
     tp->close = 1;
-    for(unsigned i_exit=0; i_exit<i; i_exit++) queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
-    for(unsigned i_exit=0; i_exit<i; i_exit++) thrd_join(tp->thread_buffer[i], NULL);
+    for(unsigned i_exit=0; i_exit<i; i_exit++)
+    {
+        int push_ret = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
+        if(push_ret != thrd_success) ERRF(queue_int_push, "%i", push_ret);
+    }
+    for(unsigned i_exit=0; i_exit<i; i_exit++)
+    {
+        int join_ret = thrd_join(tp->thread_buffer[i], NULL);
+        if(join_ret != thrd_success) ERRF(thrd_join, "%i", join_ret);
+    }
     queue_int_close(&tp->work_pool);
 trap_queue_int_init_prefilled:
     queue_int_close(&tp->work_queue);
-trap_queue_init:
+trap_queue_int_init:
     return status;
 }
 
@@ -64,13 +72,17 @@ trap_queue_init:
 void threadpool_close(struct threadpool *tp)
 {
     tp->close = 1;
-    for(unsigned i=0; i<tp->n_threads; i++) queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
+    for(unsigned i=0; i<tp->n_threads; i++)
+    {
+        int push_ret = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
+        if(push_ret != thrd_success) ERRF(queue_int_push, "%i", push_ret);
+    }
     for(unsigned i=0; i<tp->n_threads; i++)
     {
         int status_work;
         int status = thrd_join(tp->thread_buffer[i], &status_work);
-        if(status != thrd_success) TRACE(TRACE_LEVEL_TRAP, "thrd_join(): %i", status);
-        if(status_work != thrd_success) TRACE(TRACE_LEVEL_TRAP, "joined worker thread: %i", status_work);
+        if(status != thrd_success) ERRF(thrd_join, "%i", status);
+        if(status_work != thrd_success) ERR("joined worker thread %u: %i", i, status_work);
     }
 }
 
@@ -87,7 +99,10 @@ int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpo
     TRAPF(status!=thrd_success, queue_int_push, "%i", status);
     return thrd_success;
 trap_queue_int_push:
-    queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
+    {
+        int putback_ret = queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
+        if(putback_ret != thrd_success) ERRF(queue_int_push, "%i", putback_ret);
+    }
 trap_queue_int_pop:
     return status;
 }

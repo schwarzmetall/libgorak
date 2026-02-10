@@ -18,7 +18,16 @@ enum fdset_input_callback_action : uint_fast8_t
     N_FDSET_INPUT_CALLBACK_ACTIONS
 };
 
-typedef enum fdset_input_callback_action fdset_input_callback(int fd, void *buf, unsigned nbuf, int_fast8_t err);
+enum fdset_input_error : uint_fast8_t
+{
+    FDSET_INPUT_ERROR_NONE = 0,
+    FDSET_INPUT_ERROR_POLL,
+    FDSET_INPUT_ERROR_READ,
+
+    N_FDSET_INPUT_ERRORS
+};
+
+typedef enum fdset_input_callback_action fdset_input_callback(int fd, void *buf, unsigned nbuf, enum fdset_input_error err);
 
 struct fdset_input_fd_info
 {
