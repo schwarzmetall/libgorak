@@ -58,6 +58,7 @@ trap_thrd_create:
     }
     for(unsigned i_exit=0; i_exit<i; i_exit++)
     {
+        /* TODO: might block indefinitely */
         int status_join = thrd_join(tp->thread_buffer[i], NULL);
         if(status_join != thrd_success) ERRF(thrd_join, "%i", status_join);
     }
@@ -84,6 +85,7 @@ int threadpool_close(struct threadpool *tp)
     for(unsigned i=0; i<tp->n_threads; i++)
     {
         int status_work;
+        /* TODO: might block indefinitely */
         int status_join = thrd_join(tp->thread_buffer[i], &status_work);
         if(status_join != thrd_success)
         {

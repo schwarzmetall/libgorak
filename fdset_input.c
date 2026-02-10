@@ -2,6 +2,7 @@
 #include <threads.h>
 #include <unistd.h>
 #include <lgk_tnt.h>
+#include <lgk_fd.h>
 #include <lgk_threads.h>
 #include <lgk_fdset_input.h>
 
@@ -49,11 +50,12 @@ static int fdset_input_thread(void *data)
     {
         while(cmd == THREAD_CMD_PAUSE)
         {
+            /* read() returns when fdset_input_close() closes the write end of the pipe (read returns 0, EOF). */
             ssize_t nread = read(fi->pipefd_read, &cmd, 1);
             TRAPFES(nread != 1, read, pipe_wait);
         }
-        int err = mtx_timedlock_ms(&fi->mutex, fi->lock_timeout_ms);
-        TRAPF(err!=thrd_success, mtx_timedlock_ms, "%i", err);
+        int status = mtx_timedlock_ms(&fi->mutex, fi->io_timeout_ms);
+        TRAPF(status!=thrd_success, mtx_timedlock_ms, "%i", status);
         int nevents = poll(fi->pollfd_buffer, fi->nused+1, (int)fi->poll_timeout_ms);
         TRAPFE(nevents<0, poll);
         short pipe_revents = fi->pollfd_buffer[0].revents;
@@ -62,6 +64,7 @@ static int fdset_input_thread(void *data)
             if(pipe_revents & POLLHUP) exit = -1;
             if(pipe_revents & POLLIN)
             {
+                /* Follow-up to poll() that indicated POLLIN; data is available so read should not block. */
                 ssize_t nread = read(fi->pipefd_read, &cmd, 1);
                 TRAPFES(nread != 1, read, pipe_pollin);
             }
@@ -79,6 +82,7 @@ static int fdset_input_thread(void *data)
                 if(revents & POLLIN)
                 {
                     uint8_t *buf_read = ((uint8_t*)fd_info->buffer) + fd_info->buffer_used;
+                    /* Follow-up to poll() that indicated POLLIN for this fd; data is available so read should not block. */
                     ssize_t nread = read(pollfd->fd, buf_read, fd_info->buffer_size - fd_info->buffer_used);
                     if(nread > 0) fd_info->buffer_used += nread;
                     if(fd_info->callback) callback_exec(fi, i, (nread < 0) ? FDSET_INPUT_ERROR_READ : 0);
@@ -88,8 +92,8 @@ static int fdset_input_thread(void *data)
                 nevents--;
             }
         }
-        err = mtx_unlock(&fi->mutex);
-        TRAPF(err!=thrd_success, mtx_unlock, "%i", err);
+        status = mtx_unlock(&fi->mutex);
+        TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
     }
     if(close(fi->pipefd_read)) ERRFE(close);
     return 0;
@@ -102,7 +106,7 @@ trap_read_pipe_wait:
     return -1;
 }
 
-int fdset_input_init(struct fdset_input *const fi, struct fdset_input_fd_info *const fd_info_buffer, struct pollfd *const pollfd_buffer, unsigned nmax, unsigned poll_timeout_ms, unsigned lock_timeout_ms)
+int fdset_input_init(struct fdset_input *const fi, struct fdset_input_fd_info *const fd_info_buffer, struct pollfd *const pollfd_buffer, unsigned nmax, unsigned poll_timeout_ms, unsigned io_timeout_ms)
 {
     TRAP(!nmax, nmax, "nmax==%i", nmax);
     fi->fd_info_buffer = fd_info_buffer;
@@ -110,14 +114,14 @@ int fdset_input_init(struct fdset_input *const fi, struct fdset_input_fd_info *c
     fi->nmax = nmax;
     fi->nused = 0;
     fi->poll_timeout_ms = poll_timeout_ms ? poll_timeout_ms : FDSET_INPUT_DEFAULT_TIMEOUT_MS;
-    fi->lock_timeout_ms = lock_timeout_ms ? lock_timeout_ms : FDSET_INPUT_DEFAULT_TIMEOUT_MS;
-    int err = pipe(fi->pipefd);
-    TRAPFE(err, pipe);
+    fi->io_timeout_ms = io_timeout_ms ? io_timeout_ms : FDSET_INPUT_DEFAULT_TIMEOUT_MS;
+    int status = pipe(fi->pipefd);
+    TRAPFE(status, pipe);
     pollfd_buffer[0] = (struct pollfd){fi->pipefd_read, POLLIN, 0};
-    err = mtx_init(&fi->mutex, mtx_timed);
-    TRAPF(err!=thrd_success, mtx_init, "%i", err);
-    err = thrd_create(&fi->thread, fdset_input_thread, fi);
-    TRAPF(err!=thrd_success, thrd_create, "%i", err);
+    status = mtx_init(&fi->mutex, mtx_timed);
+    TRAPF(status!=thrd_success, mtx_init, "%i", status);
+    status = thrd_create(&fi->thread, fdset_input_thread, fi);
+    TRAPF(status!=thrd_success, thrd_create, "%i", status);
     return 0;
 trap_thrd_create:
     mtx_destroy(&fi->mutex);
@@ -132,8 +136,9 @@ trap_nmax:
 int fdset_input_close(struct fdset_input *fi, int *thread_res)
 {
     if(close(fi->pipefd_write)) ERRFE(close);
-    int err = thrd_join(fi->thread, thread_res);
-    TRAPF(err!=thrd_success, thrd_join, "%i", err);
+    /* TODO: might block indefinitely */
+    int status = thrd_join(fi->thread, thread_res);
+    TRAPF(status!=thrd_success, thrd_join, "%i", status);
     mtx_destroy(&fi->mutex);
     return 0;
 trap_thrd_join:
@@ -143,23 +148,26 @@ trap_thrd_join:
 int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb)
 {
     TRAP(fi->nused >= fi->nmax, full, "nmax==%u, nused==%u", fi->nmax, fi->nused);
-    uint8_t cmd = THREAD_CMD_PAUSE;
-    ssize_t nwritten = write(fi->pipefd_write, &cmd, 1);
-    TRAPFES(nwritten != 1, write, pause);
-    int err = mtx_timedlock_ms(&fi->mutex, fi->lock_timeout_ms);
-    TRAPF(err!=thrd_success, mtx_timedlock_ms, "%i", err);
+    ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_PAUSE}, 1, fi->io_timeout_ms, NULL);
+    TRAPFS(!nwritten, fd_write_timed, timeout_pause, "%s", "timeout");
+    TRAPFES(nwritten<0, fd_write_timed, pause);
+    int status = mtx_timedlock_ms(&fi->mutex, fi->io_timeout_ms);
+    TRAPF(status!=thrd_success, mtx_timedlock_ms, "%i", status);
     int index = fi->nused++;
     fi->fd_info_buffer[index] = (struct fdset_input_fd_info){cb, bufsize, 0, buffer};
     fi->pollfd_buffer[index+1] = (struct pollfd){fd, POLLIN, 0};
-    err = mtx_unlock(&fi->mutex);
-    TRAPF(err!=thrd_success, mtx_unlock, "%i", err);
-    nwritten = write(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1);
-    TRAPFES(nwritten != 1, write, run);
+    status = mtx_unlock(&fi->mutex);
+    TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
+    nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1, fi->io_timeout_ms, NULL);
+    TRAPFS(!nwritten, fd_write_timed, timeout_run, "%s", "timeout");
+    TRAPFES(nwritten<0, fd_write_timed, run);
     return 0;
-trap_write_run:
+trap_fd_write_timed_run:
+trap_fd_write_timed_timeout_run:
 trap_mtx_unlock:
 trap_mtx_timedlock_ms:
-trap_write_pause:
+trap_fd_write_timed_pause:
+trap_fd_write_timed_timeout_pause:
 trap_full:
     return -1;
 }
@@ -170,22 +178,25 @@ int fdset_input_async_remove_fd(struct fdset_input *fi, int fd)
     unsigned index;
     for(index=0; index<fi->nmax; index++) if(fi->pollfd_buffer[index+1].fd == fd) break;
     TRAP(index>=fi->nmax, invalid_fd, "invalid fd: %i", fd);
-    uint8_t cmd = THREAD_CMD_PAUSE;
-    ssize_t nwritten = write(fi->pipefd_write, &cmd, 1);
-    TRAPFES(nwritten != 1, write, pause);
-    int err = mtx_timedlock_ms(&fi->mutex, fi->lock_timeout_ms);
-    TRAPF(err!=thrd_success, mtx_timedlock_ms, "%i", err);
+    ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_PAUSE}, 1, fi->io_timeout_ms, NULL);
+    TRAPFS(!nwritten, fd_write_timed, timeout_pause, "%s", "timeout");
+    TRAPFES(nwritten < 0, fd_write_timed, pause);
+    int status = mtx_timedlock_ms(&fi->mutex, fi->io_timeout_ms);
+    TRAPF(status!=thrd_success, mtx_timedlock_ms, "%i", status);
     fi->pollfd_buffer[index+1] = fi->pollfd_buffer[fi->nused--];
     fi->fd_info_buffer[index] = fi->fd_info_buffer[fi->nused];
-    err = mtx_unlock(&fi->mutex);
-    TRAPF(err!=thrd_success, mtx_unlock, "%i", err);
-    nwritten = write(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1);
-    TRAPFES(nwritten != 1, write, run);
+    status = mtx_unlock(&fi->mutex);
+    TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
+    nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1, fi->io_timeout_ms, NULL);
+    TRAPFS(!nwritten, fd_write_timed, timeout_run, "%s", "timeout");
+    TRAPFES(nwritten<0, fd_write_timed, run);
     return 0;
-trap_write_run:
+trap_fd_write_timed_run:
+trap_fd_write_timed_timeout_run:
 trap_mtx_unlock:
 trap_mtx_timedlock_ms:
-trap_write_pause:
+trap_fd_write_timed_pause:
+trap_fd_write_timed_timeout_pause:
 trap_invalid_fd:
 trap_empty:
     return -1;

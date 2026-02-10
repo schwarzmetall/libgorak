@@ -4,9 +4,12 @@
 #include <stdint.h>
 #include <lgk_util.h>
 
-#ifndef LGK_TNT_NO_ERRNO
+#ifdef LGK_TNT_NO_ERRNO
+    #define LGK_TNT_STRERROR(x) "failed"
+#else
     #include <string.h>
     #include <errno.h>
+    #define LGK_TNT_STRERROR(x) strerror(x)
 #endif
 
 #ifndef LGK_TNT_LABEL_PREFIX
@@ -78,24 +81,14 @@ extern volatile unsigned trace_output_level;
     #define ERR(...) TRACE(TRACE_LEVEL_ERROR, __VA_ARGS__)
     #define DBGVAR(var, fmt) DBG(#var"=="fmt, var)
     #define ERRF(func, fmt, ...) ERR(#func"(): "fmt, __VA_ARGS__)
-    #ifndef LGK_TNT_NO_ERRNO
-        #define ERRFE(func) ERR(#func"(): %s", strerror(errno))
-    #else
-        #define ERRFE(func) ERR(#func"(): failed")
-    #endif
+    #define ERRFE(func) ERR(#func"(): %s", LGK_TNT_STRERROR(errno))
 #endif
 
 #define TRAPNULL(ptr) TRAP(!ptr, ptr##_null, "null pointer: "#ptr)
 #define TRAPF(cond, func, fmt, ...) TRAP(cond, func, #func"(): "fmt, __VA_ARGS__)
 #define TRAPFS(cond, func, suffix, fmt, ...) TRAP(cond, func##_##suffix, #func"(): "fmt, __VA_ARGS__)
-
-#ifndef LGK_TNT_NO_ERRNO
-    #define TRAPFE(cond, func) TRAPF(cond, func, "%s", strerror(errno))
-    #define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", strerror(errno))
-#else
-    #define TRAPFE(cond, func) TRAP(cond, func, #func"(): failed")
-    #define TRAPFES(cond, func, suffix) TRAP(cond, func##_##suffix, #func"(): failed")
-#endif
+#define TRAPFE(cond, func) TRAPF(cond, func, "%s", LGK_TNT_STRERROR(errno))
+#define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", LGK_TNT_STRERROR(errno))
 
 #define TRAP_SILENT(cond, label)\
     if(cond)\
