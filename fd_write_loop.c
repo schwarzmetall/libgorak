@@ -7,7 +7,7 @@
 #include <lgk_tnt.h>
 #include <lgk_fd.h>
 
-size_t writeloop(int fd, const void *buf, size_t count, int timeout_ms, int_least8_t *err)
+size_t fd_write_loop(int fd, const void *buf, size_t count, int timeout_ms, int_fast8_t *err)
 {
     const uint8_t *restrict p_buf = buf;
     if(!count) return 0;
@@ -20,6 +20,7 @@ size_t writeloop(int fd, const void *buf, size_t count, int timeout_ms, int_leas
         if(!status_poll || (fds.revents & POLLHUP)) break;
         ssize_t nwritten = write(fd, p_buf, nleft);
         TRAPFE(nwritten<0, write);
+        if(!nwritten) ERR("no bytes written");
         nleft -= nwritten;
         p_buf += nwritten;
     }

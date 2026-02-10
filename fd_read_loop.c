@@ -7,7 +7,7 @@
 #include <lgk_tnt.h>
 #include <lgk_fd.h>
 
-size_t readloop(int fd, void *buf, size_t count, int timeout_ms, int_least8_t *err)
+size_t fd_read_loop(int fd, void *buf, size_t count, int timeout_ms, int_fast8_t *err)
 {
     uint8_t *restrict p_buf = buf;
     if(!count) return 0;
