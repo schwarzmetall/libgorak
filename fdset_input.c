@@ -73,7 +73,7 @@ static int fdset_input_thread(void *data)
                 TRAPFES(nread != 1, read, pipe_pollin);
             }
             if(pipe_revents & POLLERRMASK) FATAL("errors reported in pipe_revents: %04hx", pipe_revents);
-            if(pipe_revents & ~(POLLERRMASK | POLLREADMASK)) FATAL("unhandled flags in pipe_revents: %04hx", pipe_revents);
+            if(pipe_revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) FATAL("unhandled flags in pipe_revents: %04hx", pipe_revents);
             nevents--;
         }
         for(unsigned i=0; nevents && (i<fi->nused); i++)
@@ -150,17 +150,17 @@ trap_fi_null:
     return thrd_error;
 }
 
-int fdset_input_close(struct fdset_input *fi, int timeout_ms, int_fast8_t timeout_detach)
+int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach)
 {
     TRAPNULL(fi);
     fi->close = -1;
     int status = close(fi->pipefd_write) ? thrd_error : thrd_success;
     if(status!=thrd_success) FATALFE(close);
     int thread_res;
-    int status_join = lgk_thread_join(&fi->thread, &thread_res, timeout_ms, timeout_detach);
+    int status_join = lgk_thread_join(&fi->thread, &thread_res, timeout_detach);
     if(status_join!=thrd_success)
     {
-        FATALF(lgk_thread_join, "%i", status);
+        FATALF(lgk_thread_join, "%i", status_join);
         status = status_join;
     }
     else if(thread_res)
