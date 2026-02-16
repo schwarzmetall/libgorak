@@ -63,7 +63,7 @@ struct fdset_input
 
 /* pollfd_buffer must have length at least nmax + 1 (one element for the internal pipe). */
 int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax, int timeout_ms);
-int fdset_input_close(struct fdset_input *fi, int timeout_ms, int_fast8_t timeout_detach);
+int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach);
 int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb);
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd);
 
