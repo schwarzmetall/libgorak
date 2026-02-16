@@ -54,13 +54,13 @@ trap_thrd_create:
     for(unsigned i_exit=0; i_exit<i; i_exit++)
     {
         int status_push = queue_int_push(&tp->work_queue, -1, tp->timeout_ms);
-        if(status_push != thrd_success) ERRF(queue_int_push, "%i", status_push);
+        if(status_push != thrd_success) FATALF(queue_int_push, "%i", status_push);
     }
     for(unsigned i_exit=0; i_exit<i; i_exit++)
     {
         /* TODO: might block indefinitely */
         int status_join = thrd_join(tp->thread_buffer[i], NULL);
-        if(status_join != thrd_success) ERRF(thrd_join, "%i", status_join);
+        if(status_join != thrd_success) FATALF(thrd_join, "%i", status_join);
     }
     queue_int_close(&tp->work_pool);
 trap_queue_int_init_prefilled:
@@ -79,7 +79,7 @@ int threadpool_close(struct threadpool *tp)
         if(status_push != thrd_success)
         {
             if(status == thrd_success) status = status_push;
-            ERRF(queue_int_push, "%i", status_push);
+            FATALF(queue_int_push, "%i", status_push);
         }
     }
     for(unsigned i=0; i<tp->n_threads; i++)
@@ -90,12 +90,12 @@ int threadpool_close(struct threadpool *tp)
         if(status_join != thrd_success)
         {
             if(status == thrd_success) status = status_join;
-            ERRF(thrd_join, "%i", status_join);
+            FATALF(thrd_join, "%i", status_join);
         }
         if(status_work != thrd_success)
         {
             if(status == thrd_success) status = status_work;
-	    ERR("joined worker thread %u: %i", i, status_work);
+	    FATAL("joined worker thread %u: %i", i, status_work);
         }
     }
     return status;
@@ -116,7 +116,7 @@ int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpo
 trap_queue_int_push:
     {
         int status_putback = queue_int_push(&tp->work_pool, i_work, tp->timeout_ms);
-        if(status_putback != thrd_success) ERRF(queue_int_push, "%i", status_putback);
+        if(status_putback != thrd_success) FATALF(queue_int_push, "%i", status_putback);
     }
 trap_queue_int_pop:
     return status;

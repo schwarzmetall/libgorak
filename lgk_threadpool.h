@@ -5,6 +5,8 @@
 #include <threads.h>
 #include <lgk_queue_int.h>
 
+#warning "threadpool should not be used. Needs to be fixed first."
+
 #define THREADPOOL_FLAG_UNTIMED 0x01
 
 #define THREADPOOL_STATIC(name, thread_buffer_size, queue_buffer_size)\
