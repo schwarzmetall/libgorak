@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <threads.h>
 
+#define THRD_FAIL(x) ((x!=thrd_success) && (x!=thrd_timedout))
+
 struct lgk_monitor
 {
     mtx_t mutex;

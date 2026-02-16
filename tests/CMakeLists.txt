@@ -8,3 +8,7 @@ add_test(NAME test_thread COMMAND test_thread)
 add_executable(test_fdset_input test_fdset_input.c)
 target_link_libraries(test_fdset_input PRIVATE libgorak)
 add_test(NAME test_fdset_input COMMAND test_fdset_input)
+
+add_executable(test_queue_int test_queue_int.c)
+target_link_libraries(test_queue_int PRIVATE libgorak)
+add_test(NAME test_queue_int COMMAND test_queue_int)
