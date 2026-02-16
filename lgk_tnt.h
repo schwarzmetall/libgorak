@@ -82,11 +82,11 @@ extern volatile unsigned trace_output_level;
     #define WARN(...) TRACE(TRACE_LEVEL_WARNING, __VA_ARGS__)
     #define INFO(...) TRACE(TRACE_LEVEL_INFO, __VA_ARGS__)
     #define DEBUG(...) TRACE(TRACE_LEVEL_DEBUG, __VA_ARGS__)
+    #define DEBUGVAR(var, fmt) DEBUG(#var"=="fmt, var)
     #define FATALF(func, fmt, ...) TRACEF(TRACE_LEVEL_FATAL, func, fmt, __VA_ARGS__)
     #define FATALFE(func) TRACEFE(TRACE_LEVEL_FATAL, func)
     #define ERRORF(func, fmt, ...) TRACEF(TRACE_LEVEL_ERROR, func, fmt, __VA_ARGS__)
     #define ERRORFE(func) TRACEFE(TRACE_LEVEL_ERROR, func)
-    #define DBGVAR(var, fmt) DBG(#var"=="fmt, var)
 #endif
 
 #define TRAPNULL(ptr) TRAP(!ptr, ptr##_null, "null pointer: "#ptr)

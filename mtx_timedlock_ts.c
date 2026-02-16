@@ -2,12 +2,23 @@
 #include <lgk_timespec.h>
 #include <lgk_threads.h>
 
-int mtx_timedlock_ts(mtx_t *mtx, const struct timespec *ts)
+int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *ts)
 {
-    TRAPNULL(mtx);
-    int status = ts ? mtx_timedlock(mtx, ts) : mtx_lock(mtx);
-    if(status!=thrd_timedout) FATAL("mtx[_timed]_lock(): %i", status);
+    TRAPNULL(mutex);
+    int status = thrd_error;
+    if(ts)
+    {
+        status = mtx_timedlock(mutex, ts);
+        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), mtx_timedlock, "%i", status);
+    }
+    else
+    {
+        status = mtx_lock(mutex);
+        TRAPF(status!=thrd_success, mtx_lock, "%i", status);
+    }
     return status;
-trap_mtx_null:
-    return thrd_error;
+trap_mtx_lock:
+trap_mtx_timedlock:
+trap_mutex_null:
+    return status;
 }

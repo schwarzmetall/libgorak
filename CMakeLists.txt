@@ -29,7 +29,7 @@ set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_ptr.h" "queue_ptr.c")
 set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_int.h" "queue_int.c")
 set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_uint.h" "queue_uint.c")
 set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threadpool.h" "threadpool.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threads.h" "mtx_timedlock_ms.c" "cnd_timedwait_ms.c" "monitor.c" "thread.c")
+set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threads.h" "mtx_timedlock_ms.c" "mtx_timedlock_ts.c" "cnd_timedwait_ms.c" "cnd_timedwait_ts.c" "monitor.c" "thread.c")
 set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_fdset_input.h" "fdset_input.c")
 
 add_library(libgorak ${LIBGORAK_SOURCES})
