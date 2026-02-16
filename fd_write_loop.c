@@ -7,6 +7,13 @@
 #include <lgk_tnt.h>
 #include <lgk_fd.h>
 
+constexpr short POLLERRMASK = POLLERR | POLLNVAL;
+#ifdef _XOPEN_SOURCE
+constexpr short POLLWRITEMASK = POLLOUT | POLLWRNORM;
+#else
+constexpr short POLLWRITEMASK = POLLOUT;
+#endif
+
 size_t fd_write_loop(int fd, const void *buf, size_t count, int timeout_ms, int_fast8_t *err)
 {
     const uint8_t *restrict p_buf = buf;
@@ -14,13 +21,12 @@ size_t fd_write_loop(int fd, const void *buf, size_t count, int timeout_ms, int_
     size_t nleft = count;
     while(nleft)
     {
-        struct pollfd fds = { fd, POLLOUT, 0 };
+        struct pollfd fds = { fd, POLLWRITEMASK, 0 };
         int status_poll = poll(&fds, 1, timeout_ms);
-        TRAPFE((status_poll<0)||(fds.revents&(POLLERR|POLLNVAL)), poll);
+        TRAPFE((status_poll<0)||(fds.revents&POLLERRMASK), poll);
         if(!status_poll || (fds.revents & POLLHUP)) break;
         ssize_t nwritten = write(fd, p_buf, nleft);
         TRAPFE(nwritten<0, write);
-        if(!nwritten) ERR("no bytes written");
         nleft -= nwritten;
         p_buf += nwritten;
     }

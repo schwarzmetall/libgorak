@@ -6,7 +6,7 @@
 
 void lgk_tnt_print_default(const char *file, unsigned line, enum trace_level level, const char *format, ...)
 {
-    static const char *const level_tags[] = {"TRP", "ERR", "WRN", "INF", "DBG"};
+    static const char *const level_tags[] = {"FATAL   ", "ERROR   ", "WARNING ", "INFO    ", "DEBUG   "};
     static const char *const tag_fallback = "INV";
     const char *const tag = (level < ASIZE(level_tags)) ? level_tags[level] : tag_fallback;
     va_list ap;

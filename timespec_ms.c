@@ -5,11 +5,17 @@
 
 void timespec_offset_ms(struct timespec *ts, int offset_ms)
 {
-    int_least32_t nsec = ts->tv_nsec + (offset_ms * 1000 * 1000);
-    if((nsec >= 0) && (nsec < 999999999)) return;  // TODO: what is faster on most systems? just divide ad add sec_offset or check first?
-    // TODO FIXME negative offsets not handled!!
-    ts->tv_sec += nsec / 1000000000;
-    ts->tv_nsec = nsec % 1000000000;
+// TODO refactor to only use 32-bit arithmetics
+    int_least64_t nsec = ts->tv_nsec + (offset_ms*1000);
+    int_least32_t offset_sec = nsec / (1000*1000*1000);
+    nsec %= 1000*1000*1000;
+    if(nsec < 0)
+    {
+        nsec += (1000*1000*1000);
+        offset_sec--;
+    }
+    ts->tv_sec += offset_sec;
+    ts->tv_nsec = nsec;
 }
 
 int timespec_get_offset_ms(struct timespec *ts, int base, int offset_ms)

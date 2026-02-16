@@ -14,8 +14,9 @@ ssize_t fd_read_timed(int fd, void *buf, size_t count, int timeout_ms, int_fast8
     if(pollerr) *pollerr = 0;
     if(!status_poll) return 0;
     ssize_t nread = read(fd, buf, count);
-    if(!nread) ERR("no bytes read");
+    TRAPFE(nread<0, read);
     return nread;
+trap_read:
 trap_poll:
     if(pollerr) *pollerr = -1;
     return -1;

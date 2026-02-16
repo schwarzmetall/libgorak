@@ -7,6 +7,13 @@
 #include <lgk_tnt.h>
 #include <lgk_fd.h>
 
+constexpr short POLLERRMASK = POLLERR | POLLNVAL;
+#ifdef _XOPEN_SOURCE
+constexpr short POLLREADMASK = POLLIN | POLLRDNORM;
+#else
+constexpr short POLLREADMASK = POLLIN;
+#endif
+
 size_t fd_read_loop(int fd, void *buf, size_t count, int timeout_ms, int_fast8_t *err)
 {
     uint8_t *restrict p_buf = buf;
@@ -14,9 +21,9 @@ size_t fd_read_loop(int fd, void *buf, size_t count, int timeout_ms, int_fast8_t
     size_t nleft = count;
     while(nleft)
     {
-        struct pollfd fds = { fd, POLLIN, 0 };
+        struct pollfd fds = { fd, POLLREADMASK, 0 };
         int status_poll = poll(&fds, 1, timeout_ms);
-        TRAPFE((status_poll<0)||(fds.revents&(POLLERR|POLLNVAL)), poll);
+        TRAPFE((status_poll<0)||(fds.revents&POLLERRMASK), poll);
         if(!status_poll) break;
         ssize_t nread = read(fd, p_buf, nleft);
         TRAPFE(nread<0, read);

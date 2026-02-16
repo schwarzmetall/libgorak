@@ -15,8 +15,9 @@ ssize_t fd_write_timed(int fd, const void *buf, size_t count, int timeout_ms, in
     if(!status_poll) return 0;
     if(fds.revents & POLLHUP) return 0;
     ssize_t nwritten = write(fd, buf, count);
-    if(!nwritten) ERR("no bytes written");
+    TRAPFE(nwritten<0, write);
     return nwritten;
+trap_write:
 trap_poll:
     if(pollerr) *pollerr = -1;
     return -1;

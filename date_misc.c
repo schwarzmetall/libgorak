@@ -9,11 +9,7 @@ uint_fast8_t leap_year(uint_fast16_t year)
     return 1;
 }
 
-/**
-  * TODO
-  *
-  * NOTE: zero-based (jan^=0, feb^=1)
-  */
+/* NOTE: zero-based (jan^=0, feb^=1) */
 uint_fast8_t days_in_month(uint_fast16_t year, uint_fast8_t month)
 {
     constexpr uint_fast8_t days_in_month_nonleap[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
@@ -26,11 +22,7 @@ uint_fast16_t days_in_year(uint_fast16_t year)
     return 365 + leap_year(year);
 }
 
-/**
-  * TODO
-  * 
-  * NOTE: zero-based (jan^=0, feb^=1)
-  */
+/* NOTE: zero-based (jan^=0, feb^=1) */
 uint_fast16_t days_before_month(uint_fast16_t year, uint_fast8_t month)
 {
     constexpr uint_fast16_t days_before_month_nonleap[11] =
