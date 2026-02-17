@@ -1,6 +1,7 @@
 #ifndef LGK_THREADS_H
 #define LGK_THREADS_H
 
+#include <stdatomic.h>
 #include <stdint.h>
 #include <threads.h>
 
@@ -20,7 +21,7 @@ struct lgk_thread
     int res;
     struct lgk_monitor *monitor;
     int timeout_ms;
-    int_fast8_t stopped;
+    atomic_int_fast8_t stopped;
 };  
 
 int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *timeout_ts);
