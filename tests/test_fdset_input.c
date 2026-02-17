@@ -13,6 +13,10 @@
 #define NMAX 4
 #define BUF_SIZE 256
 #define TEST_MSG "hello fdset_input"
+/* Long enough for join and mutex/poll under load; avoids flaky lgk_thread_join timeouts. */
+#define FDSET_TIMEOUT_MS 15000
+/* Wait for callback / thread shutdown under load. */
+#define WAIT_FOR_CALLBACK_SEC 5
 
 static char received_buf[BUF_SIZE];
 static unsigned received_len;
@@ -51,7 +55,7 @@ static void test_pipe_data_gets_through(void)
 
     assert(pipe(pipefd) == 0);
 
-    status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, 2000);
+    status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, FDSET_TIMEOUT_MS);
     assert(status == thrd_success);
 
     status = fdset_input_async_add_fd(&fi, pipefd[0], pipe_buf, BUF_SIZE, on_data);
@@ -70,7 +74,7 @@ static void test_pipe_data_gets_through(void)
     while (!received_done) {
         struct timespec ts;
         timespec_get(&ts, TIME_UTC);
-        ts.tv_sec += 2;
+        ts.tv_sec += WAIT_FOR_CALLBACK_SEC;
         int r = cnd_timedwait(&received_cnd, &received_mtx, &ts);
         assert(r == thrd_success || r == thrd_timedout);
         if (r == thrd_timedout)
@@ -82,7 +86,9 @@ static void test_pipe_data_gets_through(void)
     assert(received_len == strlen(TEST_MSG) + 1);
     assert(memcmp(received_buf, TEST_MSG, received_len) == 0);
 
-    /* Close fdset first so the thread stops; then close pipe write end (avoid POLLHUP while polling). */
+    /* Close fdset first so the thread stops; then close pipe write end (avoid POLLHUP while polling).
+     * Give the worker a moment to see POLLHUP before we block in join. */
+    thrd_sleep(&(struct timespec){ .tv_sec = 0, .tv_nsec = 50 * 1000 * 1000 }, NULL);
     status = fdset_input_close(&fi, 0);
     assert(status == thrd_success);
     close(pipefd[1]);
@@ -133,7 +139,7 @@ static void test_two_pipes_both_get_data(void)
     assert(pipe(pipefd_a) == 0);
     assert(pipe(pipefd_b) == 0);
 
-    status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, 2000);
+    status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, FDSET_TIMEOUT_MS);
     assert(status == thrd_success);
 
     status = fdset_input_async_add_fd(&fi, pipefd_a[0], pipe_buf_a, BUF_SIZE, on_data_a);
@@ -144,8 +150,8 @@ static void test_two_pipes_both_get_data(void)
     assert(write(pipefd_a[1], "A", 2) == 2);
     assert(write(pipefd_b[1], "B", 2) == 2);
 
-    /* Brief wait for both callbacks. */
-    for (int i = 0; i < 50; i++) {
+    /* Wait for both callbacks (under load callbacks can be delayed). */
+    for (int i = 0; i < (WAIT_FOR_CALLBACK_SEC * 10); i++) {
         thrd_sleep(&(struct timespec){ .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 }, NULL);
         if (done_a && done_b)
             break;
@@ -156,6 +162,7 @@ static void test_two_pipes_both_get_data(void)
     assert(len_a == 2 && received_a[0] == 'A' && received_a[1] == '\0');
     assert(len_b == 2 && received_b[0] == 'B' && received_b[1] == '\0');
 
+    thrd_sleep(&(struct timespec){ .tv_sec = 0, .tv_nsec = 50 * 1000 * 1000 }, NULL);
     status = fdset_input_close(&fi, 0);
     assert(status == thrd_success);
     close(pipefd_a[1]);

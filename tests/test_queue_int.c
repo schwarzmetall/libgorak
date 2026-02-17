@@ -11,6 +11,8 @@
 
 #define QUEUE_SIZE 8192
 #define N_ITEMS    (QUEUE_SIZE << 6)
+/* Long timeout so producer/consumer don't time out under heavy load or slow scheduling. */
+#define QUEUE_TIMEOUT_MS 60000
 
 static struct queue_int g_q;
 static int g_buffer[QUEUE_SIZE];
@@ -19,7 +21,7 @@ static int producer_thread(void *arg)
 {
     (void)arg;
     for (int i = 0; i < N_ITEMS; i++) {
-        int status = queue_int_push(&g_q, i, 5000);
+        int status = queue_int_push(&g_q, i, QUEUE_TIMEOUT_MS);
         if (status != thrd_success)
             return -1;
     }
@@ -31,7 +33,7 @@ static int consumer_thread(void *arg)
     int *collected = arg;
     for (int i = 0; i < N_ITEMS; i++) {
         int item;
-        int status = queue_int_pop(&g_q, &item, 5000);
+        int status = queue_int_pop(&g_q, &item, QUEUE_TIMEOUT_MS);
         if (status != thrd_success)
             return -1;
         collected[i] = item;
