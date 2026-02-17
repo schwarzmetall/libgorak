@@ -17,7 +17,7 @@ trap_t_null:
     return thrd_error;
 }
 
-int lgk_thread_create(struct lgk_thread *t, thrd_start_t start, void *arg, struct lgk_monitor *monitor, int timeout_ms)
+int lgk_thread_create(struct lgk_thread *t, thrd_start_t start, void *arg, struct lgk_monitor *monitor)
 {
     TRAPNULL(t);
     t->start = start;
@@ -25,7 +25,6 @@ int lgk_thread_create(struct lgk_thread *t, thrd_start_t start, void *arg, struc
     t->res = 0;
     t->monitor = monitor;
     atomic_init(&t->stopped, 0);
-    t->timeout_ms = timeout_ms;
     int status = thrd_create(&t->thread, thread_start_wrapper, t);
     if(status!=thrd_success) FATALF(thrd_create, "%i", status);
     return status;
@@ -33,17 +32,17 @@ trap_t_null:
     return thrd_error;
 }
 
-int lgk_thread_join(struct lgk_thread *t, int *res, int_fast8_t timeout_detach)
+int lgk_thread_join(struct lgk_thread *t, int *res, int timeout_ms, int_fast8_t timeout_detach)
 {
     TRAPNULL(t);
     int res_wrapper;
     int status = thrd_success;
     int status_unlock = thrd_success;
-    if(t->timeout_ms >= 0)
+    if(timeout_ms >= 0)
     {
         TRAPNULL_L(t->monitor, t_monitor);
         struct timespec ts;
-        status = timespec_get_offset_ms(&ts, TIME_UTC, t->timeout_ms);
+        status = timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms);
         TRAPF(status!=TIME_UTC, timespec_get_offset_ms, "%i", status);
         status = mtx_timedlock_ts(&t->monitor->mutex, &ts);
         TRAPF(status!=thrd_success, mtx_timedlock_ts, "%i", status);

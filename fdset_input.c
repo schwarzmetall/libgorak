@@ -131,7 +131,7 @@ int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info
     TRAPF(status!=thrd_success, mtx_init, "%i", status);
     status = lgk_monitor_init(&fi->thread_mon, (timeout_ms>0));
     TRAPF(status!=thrd_success, lgk_monitor_init, "%i", status);
-    status = lgk_thread_create(&fi->thread, fdset_input_thread, fi, &fi->thread_mon, timeout_ms);
+    status = lgk_thread_create(&fi->thread, fdset_input_thread, fi, &fi->thread_mon);
     TRAPF(status!=thrd_success, lgk_thread_create, "%i", status);
     return thrd_success;
 trap_lgk_thread_create:
@@ -157,7 +157,7 @@ int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach)
     int status = close(fi->pipefd_write) ? thrd_error : thrd_success;
     if(status!=thrd_success) FATALFE(close);
     int thread_res;
-    int status_join = lgk_thread_join(&fi->thread, &thread_res, timeout_detach);
+    int status_join = lgk_thread_join(&fi->thread, &thread_res, fi->timeout_ms, timeout_detach);
     if(status_join!=thrd_success)
     {
         FATALF(lgk_thread_join, "%i", status_join);

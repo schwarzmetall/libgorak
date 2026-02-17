@@ -20,7 +20,6 @@ struct lgk_thread
     void *arg;
     int res;
     struct lgk_monitor *monitor;
-    int timeout_ms;
     atomic_int_fast8_t stopped;
 };  
 
@@ -32,7 +31,7 @@ int cnd_timedwait_ms(cnd_t *cond, mtx_t *mutex, int timeout_ms);
 int lgk_monitor_init(struct lgk_monitor *m, int_fast8_t timed);
 int lgk_monitor_destroy(struct lgk_monitor *m);
 
-int lgk_thread_create(struct lgk_thread *t, thrd_start_t start, void *arg, struct lgk_monitor *monitor, int timeout_ms);
-int lgk_thread_join(struct lgk_thread *t, int *res, int_fast8_t timeout_detach);
+int lgk_thread_create(struct lgk_thread *t, thrd_start_t start, void *arg, struct lgk_monitor *monitor);
+int lgk_thread_join(struct lgk_thread *t, int *res, int timeout_ms, int_fast8_t timeout_detach);
 
 #endif

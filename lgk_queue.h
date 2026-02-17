@@ -8,13 +8,11 @@
 #include <lgk_timespec.h>
 #include <lgk_threads.h>
 
-#define QUEUE_FLAG_UNTIMED  0x01
-
 #define QUEUE_PROTOTYPES(type_data, type_size, name)\
     struct queue_##name;\
-    int queue_##name##_init(struct queue_##name *q, type_data *buffer, type_size size, uint_fast8_t flags);\
-    int queue_##name##_init_prefilled(struct queue_##name *q, type_data *buffer, type_size size, type_size used, uint_fast8_t flags);\
-    void queue_##name##_close(struct queue_##name *q);\
+    int queue_##name##_init(struct queue_##name *q, type_data *buffer, type_size size, int_fast8_t timed);\
+    int queue_##name##_init_prefilled(struct queue_##name *q, type_data *buffer, type_size size, type_size used, int_fast8_t timed);\
+    int queue_##name##_close(struct queue_##name *q);\
     int queue_##name##_push(struct queue_##name *q, type_data item, int timeout_ms);\
     int queue_##name##_pop(struct queue_##name *q, type_data *item, int timeout_ms);\
 
@@ -32,14 +30,14 @@
     };
 
 #define QUEUE_FUNCTIONS_INTERNAL(sclass, type_data, type_size, name)\
-    sclass int queue_##name##_init(struct queue_##name *q, type_data *buffer, type_size size, uint_fast8_t flags)\
+    sclass int queue_##name##_init(struct queue_##name *q, type_data *buffer, type_size size, int_fast8_t timed)\
     {\
         TRAPNULL(q);\
         TRAPNULL(buffer);\
         q->buffer = buffer;\
         q->size = size;\
         q->used = q->i_read = q->i_write = 0;\
-        int status = mtx_init(&q->mutex, (flags & QUEUE_FLAG_UNTIMED) ? mtx_plain : mtx_timed);\
+        int status = mtx_init(&q->mutex, timed ? mtx_timed : mtx_plain);\
         TRAPF(status!=thrd_success, mtx_init, "%i", status);\
         status = cnd_init(&q->cnd_readable);\
         TRAPFS(status!=thrd_success, cnd_init, readable, "%i", status);\
@@ -57,27 +55,32 @@
         return thrd_error;\
     }\
     \
-    sclass int queue_##name##_init_prefilled(struct queue_##name *q, type_data *buffer, type_size size, type_size used, uint_fast8_t flags)\
+    sclass int queue_##name##_init_prefilled(struct queue_##name *q, type_data *buffer, type_size size, type_size used, int_fast8_t timed)\
     {\
-        int status = thrd_error;\
+        TRAPNULL(q);\
         TRAP(used>size, used, "used > size");\
-        status = queue_##name##_init(q, buffer, size, flags);\
-        TRAP(status!=thrd_success, init, "queue_init(): %i", status);\
+        int status = queue_##name##_init(q, buffer, size, timed);\
+        TRAPF(status!=thrd_success, queue_##name##_init, "%i", status);\
         q->used = used;\
         if(used<size) q->i_write = used;\
-        return thrd_success;\
-    trap_init:\
-    trap_used:\
         return status;\
+    trap_queue_##name##_init:\
+        return status;\
+    trap_used:\
+    trap_q_null:\
+        return thrd_error;\
     }\
     \
-    sclass void queue_##name##_close(struct queue_##name *q)\
+    sclass int queue_##name##_close(struct queue_##name *q)\
     {\
-        /*TODO TRAPNULL(q)*/\
-        if(q->i_read != q->i_write) TRACE(TRACE_LEVEL_WARNING, "message queue not empty");\
+        TRAPNULL(q);\
+        if(q->i_read != q->i_write) WARN("queue not empty");\
         cnd_destroy(&q->cnd_writable);\
         cnd_destroy(&q->cnd_readable);\
         mtx_destroy(&q->mutex);\
+        return thrd_success;\
+    trap_q_null:\
+        return thrd_error;\
     }\
     \
     static int queue_##name##_wait_write(struct queue_##name *q, type_size min_free, int timeout_ms)\

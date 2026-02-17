@@ -45,7 +45,7 @@ static void test_two_threads_producer_consumer(void)
     thrd_t prod, cons;
     int res_prod, res_cons;
 
-    int status = queue_int_init(&g_q, g_buffer, QUEUE_SIZE, 0);
+    int status = queue_int_init(&g_q, g_buffer, QUEUE_SIZE, 1);
     assert(status == thrd_success);
 
     assert(thrd_create(&prod, producer_thread, NULL) == thrd_success);
