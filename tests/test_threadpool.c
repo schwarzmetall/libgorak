@@ -9,8 +9,8 @@
 
 #include <lgk_threadpool.h>
 
-#define N_THREADS  2u
-#define QUEUE_SIZE 8u
+#define N_THREADS  256u
+#define QUEUE_SIZE 8192u
 #define QUEUE_TIMEOUT_MS 5000
 
 THREADPOOL_STATIC(tp, N_THREADS, QUEUE_SIZE);
@@ -45,7 +45,7 @@ static void work_done_callback_with_slot(void *work_data, int result)
 }
 
 /* For multiple jobs: work_data is (void*)(uintptr_t)index; start returns index; done stores in static array. */
-static int multi_results[32]; /* large enough for N_JOBS */
+static int multi_results[QUEUE_SIZE*N_THREADS]; /* large enough for N_JOBS */
 
 static int work_start_return_index(void *arg)
 {
