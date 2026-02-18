@@ -29,11 +29,12 @@ enum fdset_input_error : uint_fast8_t
     N_FDSET_INPUT_ERRORS
 };
 
-typedef enum fdset_input_callback_action fdset_input_callback(int fd, void *buf, unsigned nbuf, enum fdset_input_error err);
+typedef enum fdset_input_callback_action fdset_input_callback(int fd, void *buf, unsigned nbuf, enum fdset_input_error err, void *arg);
 
 struct fdset_input_fd_info
 {
     fdset_input_callback *callback;
+    void *arg;
     unsigned buffer_size;
     unsigned buffer_used;
     void *buffer;
@@ -64,7 +65,7 @@ struct fdset_input
 /* pollfd_buffer must have length at least nmax + 1 (one element for the internal pipe). */
 int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax, int timeout_ms);
 int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach);
-int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb);
+int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb, void *arg);
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd);
 
 #endif

@@ -39,7 +39,7 @@ static void callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_
     };
     struct fdset_input_fd_info *fd_info = fi->fd_info_buffer + fd_index;
     struct pollfd *pollfd = fi->pollfd_buffer + fd_index + 1;
-    enum fdset_input_callback_action action = fd_info->callback(pollfd->fd, fd_info->buffer, fd_info->buffer_used, err);
+    enum fdset_input_callback_action action = fd_info->callback(pollfd->fd, fd_info->buffer, fd_info->buffer_used, err, fd_info->arg);
     TRAP(action>=N_FDSET_INPUT_CALLBACK_ACTIONS, action_invalid, "action==%i", action);
     if(callback_action_table[action]) callback_action_table[action](fi, fd_index);
 trap_action_invalid:
@@ -180,7 +180,7 @@ trap_fi_null:
     return thrd_error;
 }
 
-int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb)
+int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb, void *arg)
 {
     TRAP(fi->nused >= fi->nmax, full, "nmax==%u, nused==%u", fi->nmax, fi->nused);
     ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_PAUSE}, 1, fi->timeout_ms, NULL);
@@ -189,7 +189,7 @@ int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsig
     int status = mtx_timedlock_ms(&fi->mutex, fi->timeout_ms);
     TRAPF(status!=thrd_success, mtx_timedlock_ms, "%i", status);
     int index = fi->nused++;
-    fi->fd_info_buffer[index] = (struct fdset_input_fd_info){cb, bufsize, 0, buffer};
+    fi->fd_info_buffer[index] = (struct fdset_input_fd_info){cb, arg, bufsize, 0, buffer};
     fi->pollfd_buffer[index+1] = (struct pollfd){fd, POLLIN, 0};
     status = mtx_unlock(&fi->mutex);
     TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
