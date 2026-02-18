@@ -33,8 +33,9 @@ struct threadpool_buffer_info
 struct threadpool
 {
     unsigned n_threads;
-    struct lgk_thread *thread_buffer;
+    unsigned pool_size;
     struct lgk_monitor monitor;
+    struct lgk_thread *thread_buffer;
     struct threadpool_work *work_buffer;
     struct queue_int work_queue;
     struct queue_int work_pool;
@@ -48,6 +49,7 @@ struct threadpool_work
     void *data;
 };
 
+// TODO: decide: give caller the possibility to specify queue_size and pool_size independently?
 int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, int_fast8_t timed, int queue_timeout_ms);
 int threadpool_close(struct threadpool *tp, int join_timeout_ms, int_fast8_t timeout_detach);
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data);

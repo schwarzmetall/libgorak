@@ -74,6 +74,7 @@ int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *
     while((n_threads_created < n_threads) && (status==thrd_success)) status = lgk_thread_create(&buffer_info->thread_buffer[n_threads_created++], worker_thread_function, tp, &tp->monitor);
     TRAPF(status!=thrd_success, lgk_thread_create, "%i", status);
     tp->n_threads = n_threads;
+    tp->pool_size = queue_size; // TODO (see lgk_threadpool.h) püossibly introduce param pool_size
     tp->thread_buffer = buffer_info->thread_buffer;
     tp->work_buffer = buffer_info->work_buffer;
     return thrd_success;
@@ -121,9 +122,10 @@ trap_tp_null:
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data)
 {
     TRAPNULL(tp);
-    int i_work;
+    int i_work = -1;
     int status = queue_int_pop(&tp->work_pool, &i_work, tp->queue_timeout_ms);
     TRAPF(status!=thrd_success, queue_int_pop, "%i", status);
+    TRAP((i_work<0)||((unsigned)i_work>=tp->pool_size), i_work_out_of_bounds, "i_work==%i", i_work);
     struct threadpool_work *work = tp->work_buffer + i_work;
     work->start = start;
     work->done_callback = work_done_cb;
@@ -131,11 +133,11 @@ int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpo
     status = queue_int_push(&tp->work_queue, i_work, tp->queue_timeout_ms);
     TRAPF(status!=thrd_success, queue_int_push, "%i", status);
     return thrd_success;
+trap_i_work_out_of_bounds:
+    status = thrd_error;
 trap_queue_int_push:
-    {
-        int status_tmp = queue_int_push(&tp->work_pool, i_work, tp->queue_timeout_ms);
-        if(status_tmp != thrd_success) FATALF(queue_int_push, "%i", status_tmp);
-    }
+    int status_push_pool = queue_int_push(&tp->work_pool, i_work, tp->queue_timeout_ms);
+    if(status_push_pool != thrd_success) FATALF(queue_int_push, "%i", status_push_pool);
 trap_queue_int_pop:
     return status;
 trap_tp_null:
