@@ -16,3 +16,7 @@ add_test(NAME test_queue_int COMMAND test_queue_int)
 add_executable(test_threadpool test_threadpool.c)
 target_link_libraries(test_threadpool PRIVATE libgorak)
 add_test(NAME test_threadpool COMMAND test_threadpool)
+
+add_executable(test_timespec_ms test_timespec_ms.c)
+target_link_libraries(test_timespec_ms PRIVATE libgorak)
+add_test(NAME test_timespec_ms COMMAND test_timespec_ms)
