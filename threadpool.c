@@ -58,23 +58,29 @@ static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_
     return status;
 }
 
-int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned queue_size, int_fast8_t timed, int queue_timeout_ms)
+int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned pool_size, int_fast8_t timed_join, int queue_timeout_ms)
 {
     TRAPNULL(tp);
     TRAPNULL(buffer_info);
+    unsigned queue_size = pool_size - n_threads;
+    if(pool_size <= n_threads)
+    {
+        ERROR("pool_size==%u <= n_threads==%u, using dummy queue of size 1", pool_size, n_threads);
+	queue_size = 1;
+    }
     tp->queue_timeout_ms = queue_timeout_ms;
-    int status = lgk_monitor_init(&tp->monitor, timed);
+    int status = lgk_monitor_init(&tp->monitor, timed_join);
     TRAPF(status!=thrd_success, lgk_monitor_init, "%i", status);
-    status = queue_int_init(&tp->work_queue, buffer_info->work_queue_buffer, queue_size, timed);
+    status = queue_int_init(&tp->work_queue, buffer_info->work_queue_buffer, queue_size, (queue_timeout_ms>=0));
     TRAPF(status!=thrd_success, queue_int_init, "%i", status);
-    for(unsigned i=0; i<queue_size; i++) buffer_info->work_pool_buffer[i] = i;
-    status = queue_int_init_prefilled(&tp->work_pool, buffer_info->work_pool_buffer, queue_size, queue_size, timed);
+    for(unsigned i=0; i<pool_size; i++) buffer_info->work_pool_buffer[i] = i;
+    status = queue_int_init_prefilled(&tp->work_pool, buffer_info->work_pool_buffer, pool_size, pool_size, (queue_timeout_ms>=0));
     TRAPF(status!=thrd_success, queue_int_init_prefilled, "%i", status);
     unsigned n_threads_created = 0;
     while((n_threads_created < n_threads) && (status==thrd_success)) status = lgk_thread_create(&buffer_info->thread_buffer[n_threads_created++], worker_thread_function, tp, &tp->monitor);
     TRAPF(status!=thrd_success, lgk_thread_create, "%i", status);
     tp->n_threads = n_threads;
-    tp->pool_size = queue_size; // TODO (see lgk_threadpool.h) püossibly introduce param pool_size
+    tp->pool_size = pool_size;
     tp->thread_buffer = buffer_info->thread_buffer;
     tp->work_buffer = buffer_info->work_buffer;
     return thrd_success;

@@ -9,11 +9,12 @@
 
 #include <lgk_threadpool.h>
 
-#define N_THREADS  256u
-#define QUEUE_SIZE 8192u
+#define N_THREADS  64u
+#define POOL_SIZE  1024u
 #define QUEUE_TIMEOUT_MS 5000
+#define N_JOBS_MULTI (POOL_SIZE*N_THREADS)
 
-THREADPOOL_STATIC(tp, N_THREADS, QUEUE_SIZE);
+THREADPOOL_STATIC(tp, N_THREADS, POOL_SIZE);
 
 static int work_start_return_value(void *arg)
 {
@@ -45,7 +46,7 @@ static void work_done_callback_with_slot(void *work_data, int result)
 }
 
 /* For multiple jobs: work_data is (void*)(uintptr_t)index; start returns index; done stores in static array. */
-static int multi_results[QUEUE_SIZE*N_THREADS]; /* large enough for N_JOBS */
+static int multi_results[N_JOBS_MULTI];
 
 static int work_start_return_index(void *arg)
 {
@@ -61,7 +62,7 @@ static void work_done_store_by_index(void *work_data, int result)
 
 static void test_threadpool_init_close_empty(void)
 {
-    int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, QUEUE_SIZE, 1, QUEUE_TIMEOUT_MS);
+    int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
     assert(status == thrd_success);
 
     status = threadpool_close(&tp, QUEUE_TIMEOUT_MS, 1);
@@ -70,7 +71,7 @@ static void test_threadpool_init_close_empty(void)
 
 static void test_threadpool_schedule_single(void)
 {
-    int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, QUEUE_SIZE, 1, QUEUE_TIMEOUT_MS);
+    int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
     assert(status == thrd_success);
 
     int result_slot = -1;
@@ -86,14 +87,14 @@ static void test_threadpool_schedule_single(void)
 
 static void test_threadpool_schedule_multiple(void)
 {
-    int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, QUEUE_SIZE, 1, QUEUE_TIMEOUT_MS);
+    int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
     assert(status == thrd_success);
 
-    enum { N_JOBS = 16 };
-    for (int i = 0; i < N_JOBS; i++)
+    /* Schedule more work than pool size to verify items are returned to the pool and reused. */
+    for (unsigned i = 0; i < N_JOBS_MULTI; i++)
         multi_results[i] = -1;
 
-    for (int i = 0; i < N_JOBS; i++) {
+    for (unsigned i = 0; i < N_JOBS_MULTI; i++) {
         status = threadpool_schedule_work(&tp, work_start_return_index, work_done_store_by_index, (void *)(uintptr_t)i);
         assert(status == thrd_success);
     }
@@ -101,8 +102,8 @@ static void test_threadpool_schedule_multiple(void)
     status = threadpool_close(&tp, QUEUE_TIMEOUT_MS, 1);
     assert(status == thrd_success);
 
-    for (int i = 0; i < N_JOBS; i++)
-        assert(multi_results[i] == i);
+    for (unsigned i = 0; i < N_JOBS_MULTI; i++)
+        assert(multi_results[i] == (int)i);
 }
 
 static void test_threadpool_null_init_returns_error(void)
@@ -113,7 +114,7 @@ static void test_threadpool_null_init_returns_error(void)
         tp_work_pool_buffer,
         tp_work_buffer
     };
-    int status = threadpool_init(NULL, &info, N_THREADS, QUEUE_SIZE, 1, QUEUE_TIMEOUT_MS);
+    int status = threadpool_init(NULL, &info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
     assert(status == thrd_error);
 }
 

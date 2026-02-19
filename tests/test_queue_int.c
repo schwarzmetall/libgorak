@@ -11,8 +11,7 @@
 
 #define QUEUE_SIZE 8192
 #define N_ITEMS    (QUEUE_SIZE << 6)
-/* Long timeout so producer/consumer don't time out under heavy load or slow scheduling. */
-#define QUEUE_TIMEOUT_MS 60000
+#define QUEUE_TIMEOUT_MS 5000
 
 static struct queue_int g_q;
 static int g_buffer[QUEUE_SIZE];
