@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 include(CMakeDependentOption)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_EXTENSIONS FALSE)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
