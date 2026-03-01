@@ -41,7 +41,7 @@ const char *lgk_tnt_strip_path(const char *path);
 
 enum trace_level : uint_fast8_t
 {
-    TRACE_LEVEL_FATAL=0,
+    TRACE_LEVEL_CRITICAL=0,
     TRACE_LEVEL_ERROR,
     TRACE_LEVEL_WARNING,
     TRACE_LEVEL_INFO,
@@ -74,19 +74,19 @@ extern volatile unsigned trace_output_level;
         goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
     }
 #define TRAPL(cond, label, level, ...) TRAPLP(cond, label, level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
-#define TRAPP(cond, label, print, ...) TRAPLP(cond, label, TRACE_LEVEL_FATAL, print, __VA_ARGS__)
-#define TRAP(cond, label, ...) TRAPLP(cond, label, TRACE_LEVEL_FATAL, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
+#define TRAPP(cond, label, print, ...) TRAPLP(cond, label, TRACE_LEVEL_CRITICAL, print, __VA_ARGS__)
+#define TRAP(cond, label, ...) TRAPLP(cond, label, TRACE_LEVEL_CRITICAL, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #ifndef LGK_TNT_NO_TRACE_SHORTS
-    #define FATAL(...) TRACE(TRACE_LEVEL_FATAL, __VA_ARGS__)
-    #define ERROR(...) TRACE(TRACE_LEVEL_ERROR, __VA_ARGS__)
+    #define CRIT(...) TRACE(TRACE_LEVEL_CRITICAL, __VA_ARGS__)
+    #define ERR(...) TRACE(TRACE_LEVEL_ERROR, __VA_ARGS__)
     #define WARN(...) TRACE(TRACE_LEVEL_WARNING, __VA_ARGS__)
     #define INFO(...) TRACE(TRACE_LEVEL_INFO, __VA_ARGS__)
     #define DEBUG(...) TRACE(TRACE_LEVEL_DEBUG, __VA_ARGS__)
-    #define DEBUGVAR(var, fmt) DEBUG(#var"=="fmt, var)
-    #define FATALF(func, fmt, ...) TRACEF(TRACE_LEVEL_FATAL, func, fmt, __VA_ARGS__)
-    #define FATALFE(func) TRACEFE(TRACE_LEVEL_FATAL, func)
-    #define ERRORF(func, fmt, ...) TRACEF(TRACE_LEVEL_ERROR, func, fmt, __VA_ARGS__)
-    #define ERRORFE(func) TRACEFE(TRACE_LEVEL_ERROR, func)
+    #define CRITF(func, fmt, ...) CRIT(#func"(): "fmt, __VA_ARGS__)
+    #define ERRF(func, fmt, ...) ERR(#func"(): "fmt, __VA_ARGS__)
+    #define CRITFE(func) CRITF(func, "%s", LGK_TNT_STRERROR(errno))
+    #define ERRFE(func) ERRF(func, "%s", LGK_TNT_STRERROR(errno))
+    #define DEBUGV(value, fmt) DEBUG(#value"=="fmt, value)
 #endif
 
 #define TRAPNULL(ptr) TRAP(!ptr, ptr##_null, "null pointer: "#ptr)
@@ -94,8 +94,8 @@ extern volatile unsigned trace_output_level;
 #define TRAPVEQ(a, b, label) TRAP(a==b, label, #a"=="#b)
 #define TRAPVNEQ(a, b, label) TRAP(a!=b, label, #a"!="#b)
 #define TRAPF(cond, func, fmt, ...) TRAP(cond, func, #func"(): "fmt, __VA_ARGS__)
-#define TRAPFS(cond, func, suffix, fmt, ...) TRAP(cond, func##_##suffix, #func"(): "fmt, __VA_ARGS__)
 #define TRAPFE(cond, func) TRAPF(cond, func, "%s", LGK_TNT_STRERROR(errno))
+#define TRAPFS(cond, func, suffix, fmt, ...) TRAP(cond, func##_##suffix, #func"(): "fmt, __VA_ARGS__)
 #define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", LGK_TNT_STRERROR(errno))
 
 #define TRAP_SILENT(cond, label)\

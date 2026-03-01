@@ -23,11 +23,11 @@ static mtx_t received_mtx;
 static cnd_t received_cnd;
 static int received_done;
 
-static enum fdset_input_callback_action on_data(int fd, void *buf, unsigned nbuf, enum fdset_input_error err, void *arg)
+static enum fdset_input_callback_action on_data(int fd, void *buf, unsigned nbuf, enum fdset_input_status status, void *arg)
 {
     (void)fd;
     (void)arg;
-    assert(err == FDSET_INPUT_ERROR_NONE);
+    assert(status == FDSET_INPUT_STATUS_OK);
     assert(nbuf <= BUF_SIZE);
     mtx_lock(&received_mtx);
     received_len = nbuf;
@@ -107,22 +107,22 @@ static char received_a[BUF_SIZE], received_b[BUF_SIZE];
 static unsigned len_a, len_b;
 static int done_a, done_b;
 
-static enum fdset_input_callback_action on_data_a(int fd, void *buf, unsigned nbuf, enum fdset_input_error err, void *arg)
+static enum fdset_input_callback_action on_data_a(int fd, void *buf, unsigned nbuf, enum fdset_input_status status, void *arg)
 {
     (void)fd;
     (void)arg;
-    assert(err == FDSET_INPUT_ERROR_NONE);
+    assert(status == FDSET_INPUT_STATUS_OK);
     memcpy(received_a, buf, nbuf);
     len_a = nbuf;
     done_a = 1;
     return FDSET_INPUT_CALLBACK_ACTION_NONE;
 }
 
-static enum fdset_input_callback_action on_data_b(int fd, void *buf, unsigned nbuf, enum fdset_input_error err, void *arg)
+static enum fdset_input_callback_action on_data_b(int fd, void *buf, unsigned nbuf, enum fdset_input_status status, void *arg)
 {
     (void)fd;
     (void)arg;
-    assert(err == FDSET_INPUT_ERROR_NONE);
+    assert(status == FDSET_INPUT_STATUS_OK);
     memcpy(received_b, buf, nbuf);
     len_b = nbuf;
     done_b = 1;
@@ -192,11 +192,11 @@ static int recv_done[N_PIPES];
 static mtx_t recv_mtx;
 static cnd_t recv_cnd;
 
-static enum fdset_input_callback_action on_data_idx(int fd, void *buf, unsigned nbuf, enum fdset_input_error err, void *arg)
+static enum fdset_input_callback_action on_data_idx(int fd, void *buf, unsigned nbuf, enum fdset_input_status status, void *arg)
 {
     (void)fd;
     int idx = (int)(intptr_t)arg;
-    assert(err == FDSET_INPUT_ERROR_NONE);
+    assert(status == FDSET_INPUT_STATUS_OK);
     assert(idx >= 0 && idx < N_PIPES);
     assert(nbuf <= PIPE_READ_BUF_SIZE);
     mtx_lock(&recv_mtx);

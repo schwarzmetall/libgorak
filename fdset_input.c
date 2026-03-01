@@ -29,7 +29,7 @@ static void callback_action_remove_fd(struct fdset_input *fi, unsigned fd_index)
     fi->fd_info_buffer[fd_index] = fi->fd_info_buffer[fi->nused];
 }
 
-static void callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_input_error err)
+static void callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_input_status status)
 {
     static callback_action *const callback_action_table[N_FDSET_INPUT_CALLBACK_ACTIONS] =
     {
@@ -39,7 +39,7 @@ static void callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_
     };
     struct fdset_input_fd_info *fd_info = fi->fd_info_buffer + fd_index;
     struct pollfd *pollfd = fi->pollfd_buffer + fd_index + 1;
-    enum fdset_input_callback_action action = fd_info->callback(pollfd->fd, fd_info->buffer, fd_info->buffer_used, err, fd_info->arg);
+    enum fdset_input_callback_action action = fd_info->callback(pollfd->fd, fd_info->buffer, fd_info->buffer_used, status, fd_info->arg);
     TRAP(action>=N_FDSET_INPUT_CALLBACK_ACTIONS, action_invalid, "action==%i", action);
     if(callback_action_table[action]) callback_action_table[action](fi, fd_index);
 trap_action_invalid:
@@ -72,8 +72,8 @@ static int fdset_input_thread(void *data)
                 ssize_t nread = read(fi->pipefd_read, &cmd, 1);
                 TRAPFES(nread != 1, read, pipe_pollin);
             }
-            if(pipe_revents & POLLERRMASK) FATAL("errors reported in pipe_revents: %04hx", pipe_revents);
-            if(pipe_revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) FATAL("unhandled flags in pipe_revents: %04hx", pipe_revents);
+            if(pipe_revents & POLLERRMASK) CRIT("errors reported in pipe_revents: 0x%04hx", pipe_revents);
+            if(pipe_revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) CRIT("unhandled flags in pipe_revents: 0x%04hx", pipe_revents);
             nevents--;
         }
         for(unsigned i=0; nevents && (i<fi->nused); i++)
@@ -89,10 +89,10 @@ static int fdset_input_thread(void *data)
                     /* Follow-up to poll() that indicated POLLIN for this fd; data is available so read should not block. */
                     ssize_t nread = read(pollfd->fd, buf_read, fd_info->buffer_size - fd_info->buffer_used);
                     if(nread > 0) fd_info->buffer_used += nread;
-                    if(fd_info->callback) callback_exec(fi, i, (nread < 0) ? FDSET_INPUT_ERROR_READ : 0);
+                    if(fd_info->callback) callback_exec(fi, i, (nread < 0) ? FDSET_INPUT_STATUS_ERROR_READ : FDSET_INPUT_STATUS_OK);
                 }
-                if(revents & POLLERRMASK) if(fd_info->callback) callback_exec(fi, i, FDSET_INPUT_ERROR_POLL);
-                if(revents & ~(POLLERRMASK | POLLREADMASK)) FATAL("unhandled flags in revents: %04hx", revents);
+                if(revents & POLLERRMASK) if(fd_info->callback) callback_exec(fi, i, FDSET_INPUT_STATUS_ERROR_POLL);
+                if(revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) CRIT("unhandled flags in revents: 0x%04hx", revents);
                 nevents--;
             }
         }
@@ -100,7 +100,7 @@ static int fdset_input_thread(void *data)
         TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
     }
     TRAPVEQ(fi->close, 0, close_eq_zero);
-    if(close(fi->pipefd_read)) FATALFE(close);
+    if(close(fi->pipefd_read)) CRITFE(close);
     return thrd_success;
 trap_close_eq_zero:
 trap_mtx_unlock:
@@ -108,7 +108,7 @@ trap_read_pipe_pollin:
 trap_poll:
 trap_mtx_timedlock_ms:
 trap_read_pipe_wait:
-    if(close(fi->pipefd_read)) FATALFE(close);
+    if(close(fi->pipefd_read)) CRITFE(close);
     return thrd_error;
 }
 
@@ -135,12 +135,12 @@ int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info
     TRAPF(status!=thrd_success, lgk_thread_create, "%i", status);
     return thrd_success;
 trap_lgk_thread_create:
-    if((status=lgk_monitor_destroy(&fi->thread_mon))) FATALF(lgk_monitor_destroy, "%i", status);
+    if((status=lgk_monitor_destroy(&fi->thread_mon))) CRITF(lgk_monitor_destroy, "%i", status);
 trap_lgk_monitor_init:
     mtx_destroy(&fi->mutex);
 trap_mtx_init:
-    if(close(fi->pipefd_write)) FATALFE(close);
-    if(close(fi->pipefd_read)) FATALFE(close);
+    if(close(fi->pipefd_write)) CRITFE(close);
+    if(close(fi->pipefd_read)) CRITFE(close);
     return status;
 trap_pipe:
 trap_nmax:
@@ -155,23 +155,23 @@ int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach)
     TRAPNULL(fi);
     fi->close = -1;
     int status = close(fi->pipefd_write) ? thrd_error : thrd_success;
-    if(status!=thrd_success) FATALFE(close);
+    if(status!=thrd_success) CRITFE(close);
     int thread_res;
     int status_join = lgk_thread_join(&fi->thread, &thread_res, fi->timeout_ms, timeout_detach);
     if(status_join!=thrd_success)
     {
-        FATALF(lgk_thread_join, "%i", status_join);
+        CRITF(lgk_thread_join, "%i", status_join);
         status = status_join;
     }
     else if(thread_res)
     {
-        FATALF(fdset_input_thread, "%i", thread_res);
+        CRITF(fdset_input_thread, "%i", thread_res);
         status = thrd_error;
     }
     int status_thread_mon_destroy = lgk_monitor_destroy(&fi->thread_mon);
     if(status_thread_mon_destroy)
     {
-        FATALF(lgk_monitor_destroy, "%i", status_thread_mon_destroy);
+        CRITF(lgk_monitor_destroy, "%i", status_thread_mon_destroy);
         if(status==thrd_success) status = status_thread_mon_destroy;
     }
     mtx_destroy(&fi->mutex);

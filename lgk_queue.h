@@ -98,11 +98,11 @@
         if(status == thrd_timedout) return status;\
         TRAPF(status!=thrd_success, mtx_timedlock_ts, "%i", status);\
         while((status==thrd_success) && ((q->size-q->used)<min_free)) status = cnd_timedwait_ts(&q->cnd_writable, &q->mutex, ts_ptr);\
-        if(THRD_FAIL(status)) FATALF(cnd_timedwait_ts, "%i", status);\
+        if(THRD_FAIL(status)) CRITF(cnd_timedwait_ts, "%i", status);\
         if(status != thrd_success)\
         {\
             int status_unlock = mtx_unlock(&q->mutex);\
-            if(status_unlock != thrd_success) FATALF(mtx_unlock, "%i", status_unlock);\
+            if(status_unlock != thrd_success) CRITF(mtx_unlock, "%i", status_unlock);\
         }\
         return status;\
     trap_mtx_timedlock_ts:\
@@ -123,9 +123,9 @@
         if(q->i_write == q->size) q->i_write = 0;\
         q->used++;\
         status = cnd_signal(&q->cnd_readable);\
-        if(status != thrd_success) FATALF(cnd_signal, "%i", status);\
+        if(status != thrd_success) CRITF(cnd_signal, "%i", status);\
         int status_unlock = mtx_unlock(&q->mutex);\
-        if(status_unlock != thrd_success) FATALF(mtx_unlock, "%i", status_unlock);\
+        if(status_unlock != thrd_success) CRITF(mtx_unlock, "%i", status_unlock);\
         return (status == thrd_success) ? status_unlock : status;\
     trap_queue_##name##_wait_write:\
         return status;\
@@ -149,11 +149,11 @@
         if(status == thrd_timedout) return status;\
         TRAPF(status!=thrd_success, mtx_timedlock_ts, "%i", status);\
         while((status==thrd_success) && !q->used) status = cnd_timedwait_ts(&q->cnd_readable, &q->mutex, ts_ptr);\
-        if(THRD_FAIL(status)) FATALF(cnd_timedwait_ts, "%i", status);\
+        if(THRD_FAIL(status)) CRITF(cnd_timedwait_ts, "%i", status);\
         if(status != thrd_success)\
         {\
             int status_unlock = mtx_unlock(&q->mutex);\
-            if(status_unlock != thrd_success) FATALF(mtx_unlock, "%i", status_unlock);\
+            if(status_unlock != thrd_success) CRITF(mtx_unlock, "%i", status_unlock);\
         }\
         return status;\
     trap_mtx_timedlock_ts:\
@@ -175,9 +175,9 @@
         if(q->i_read == q->size) q->i_read = 0;\
         q->used--;\
         status = cnd_signal(&q->cnd_writable);\
-        if(status != thrd_success) FATALF(cnd_signal, "%i", status);\
+        if(status != thrd_success) CRITF(cnd_signal, "%i", status);\
         int status_unlock = mtx_unlock(&q->mutex);\
-        if(status_unlock != thrd_success) FATALF(mtx_unlock, "%i", status);\
+        if(status_unlock != thrd_success) CRITF(mtx_unlock, "%i", status);\
         return (status == thrd_success) ? status_unlock : status;\
     trap_queue_##name##_wait_read:\
         return status;\

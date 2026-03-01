@@ -23,6 +23,8 @@ struct lgk_thread
     atomic_int_fast8_t stopped;
 };  
 
+const char *lgk_thrdstrerror(int thrd_status);
+
 int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *timeout_ts);
 int mtx_timedlock_ms(mtx_t *mutex, int timeout_ms);
 int cnd_timedwait_ts(cnd_t *cond, mtx_t *mutex, const struct timespec *timeout_ts);

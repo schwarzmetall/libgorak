@@ -1,7 +1,9 @@
 #ifndef LGK_FD_H
 #define LGK_FD_H
 
+#include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 /* Read/write exactly count bytes, using poll() so each wait is bounded by timeout_ms.
  * timeout_ms: max ms to wait for fd to become readable/writable per poll; <0 = wait forever.

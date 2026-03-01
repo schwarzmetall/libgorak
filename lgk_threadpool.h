@@ -7,11 +7,11 @@
 #include <lgk_queue_int.h>
 
 #define THREADPOOL_STATIC(name, n_threads, pool_size)\
-    struct threadpool name = { 0 };\
-    static struct lgk_thread name##_thread_buffer[n_threads] = { 0 };\
-    static int name##_work_queue_buffer[pool_size-n_threads] = { 0 };\
-    static int name##_work_pool_buffer[pool_size] = { 0 };\
-    static struct threadpool_work name##_work_buffer[pool_size] = { 0 };\
+    struct threadpool name = {};\
+    static struct lgk_thread name##_thread_buffer[n_threads] = {};\
+    static int name##_work_queue_buffer[pool_size-n_threads] = {};\
+    static int name##_work_pool_buffer[pool_size] = {};\
+    static struct threadpool_work name##_work_buffer[pool_size] = {};\
     static const struct threadpool_buffer_info name##_buffer_info =\
     {\
         name##_thread_buffer,\

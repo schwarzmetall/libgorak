@@ -22,5 +22,5 @@ trap_cnd_wait:
 trap_cnd_timedwait:
 trap_mutex_null:
 trap_cond_null:
-    return status;
+    return thrd_error;
 }

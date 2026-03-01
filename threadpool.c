@@ -37,7 +37,7 @@ static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_
         if(status_push != thrd_success)
         {
             if(status == thrd_success) status = status_push;
-            FATALF(queue_int_push, "%i", status_push);
+            CRITF(queue_int_push, "%i", status_push);
         }
     }
     for(unsigned i = 0; i < n_threads; i++)
@@ -46,12 +46,12 @@ static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_
         int status_join = lgk_thread_join(&tp->thread_buffer[i], &status_work, join_timeout_ms, timeout_detach);
         if(status_join != thrd_success)
         {
-            FATALF(lgk_thread_join, "%i", status_join);
+            CRITF(lgk_thread_join, "%i", status_join);
             if(status == thrd_success) status = status_join;
         }
         if(status_work != thrd_success)
         {
-            FATAL("worker_thread_function() [%u]: %i", i, status_work);
+            CRIT("worker_thread_function() [%u]: %i", i, status_work);
             if(status == thrd_success) status = status_work;
         }
     }
@@ -65,7 +65,7 @@ int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *
     unsigned queue_size = pool_size - n_threads;
     if(pool_size <= n_threads)
     {
-        ERROR("pool_size==%u <= n_threads==%u, using dummy queue of size 1", pool_size, n_threads);
+        ERR("pool_size==%u <= n_threads==%u, using dummy queue of size 1", pool_size, n_threads);
 	queue_size = 1;
     }
     tp->queue_timeout_ms = queue_timeout_ms;
@@ -86,15 +86,15 @@ int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *
     return thrd_success;
 trap_lgk_thread_create:
     int status_cleanup = threadpool_signal_and_join_workers(tp, n_threads_created, tp->queue_timeout_ms, 1);
-    if(status_cleanup != thrd_success) FATALF(threadpool_signal_and_join_workers, "%i", status_cleanup);
+    if(status_cleanup != thrd_success) CRITF(threadpool_signal_and_join_workers, "%i", status_cleanup);
     status_cleanup = queue_int_close(&tp->work_pool);
-    if(status_cleanup != thrd_success) FATALF(queue_int_close, "%i", status_cleanup);
+    if(status_cleanup != thrd_success) CRITF(queue_int_close, "%i", status_cleanup);
 trap_queue_int_init_prefilled:
     status_cleanup = queue_int_close(&tp->work_queue);
-    if(status_cleanup != thrd_success) FATALF(queue_int_close, "%i", status_cleanup);
+    if(status_cleanup != thrd_success) CRITF(queue_int_close, "%i", status_cleanup);
 trap_queue_int_init:
     status_cleanup = lgk_monitor_destroy(&tp->monitor);
-    if(status_cleanup != thrd_success) FATALF(lgk_monitor_destroy, "%i", status_cleanup);
+    if(status_cleanup != thrd_success) CRITF(lgk_monitor_destroy, "%i", status_cleanup);
 trap_lgk_monitor_init:
     return status;
 trap_buffer_info_null:
@@ -107,17 +107,17 @@ int threadpool_close(struct threadpool *tp, int join_timeout_ms, int_fast8_t tim
     TRAPNULL(tp);
     int status = threadpool_signal_and_join_workers(tp, tp->n_threads, join_timeout_ms, timeout_detach);
     int status_cleanup = lgk_monitor_destroy(&tp->monitor);
-    if(status_cleanup != thrd_success) FATALF(lgk_monitor_destroy, "%i", status_cleanup);
+    if(status_cleanup != thrd_success) CRITF(lgk_monitor_destroy, "%i", status_cleanup);
     status_cleanup = queue_int_close(&tp->work_queue);
     if(status_cleanup != thrd_success)
     {
-        FATALF(queue_int_close, "%i", status_cleanup);
+        CRITF(queue_int_close, "%i", status_cleanup);
         if(status == thrd_success) status = status_cleanup;
     }
     status_cleanup = queue_int_close(&tp->work_pool);
     if(status_cleanup != thrd_success)
     {
-        FATALF(queue_int_close, "%i", status_cleanup);
+        CRITF(queue_int_close, "%i", status_cleanup);
         if(status == thrd_success) status = status_cleanup;
     }
     return status;
@@ -143,7 +143,7 @@ trap_i_work_out_of_bounds:
     status = thrd_error;
 trap_queue_int_push:
     int status_push_pool = queue_int_push(&tp->work_pool, i_work, tp->queue_timeout_ms);
-    if(status_push_pool != thrd_success) FATALF(queue_int_push, "%i", status_push_pool);
+    if(status_push_pool != thrd_success) CRITF(queue_int_push, "%i", status_push_pool);
 trap_queue_int_pop:
     return status;
 trap_tp_null:
