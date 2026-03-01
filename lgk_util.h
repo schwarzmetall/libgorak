@@ -15,5 +15,7 @@
     #define ABS(x) ((x)<0 ? -(x) : (x))
 #endif
 #define BITEXTRACT(value, basename) (((value) & basename##_MASK) >> basename##_SHIFT)
+#define BITSIZE(x) (sizeof(x)<<3)
+#define INTDIVCEIL(i, d) ((i+d-1)/d)
 
 #endif

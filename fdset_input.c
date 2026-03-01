@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 #include <threads.h>
 #include <unistd.h>
@@ -29,7 +30,8 @@ static void callback_action_remove_fd(struct fdset_input *fi, unsigned fd_index)
     fi->fd_info_buffer[fd_index] = fi->fd_info_buffer[fi->nused];
 }
 
-static void callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_input_status status)
+// returns non-zero if fd was removed
+static enum fdset_input_callback_action callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_input_status status)
 {
     static callback_action *const callback_action_table[N_FDSET_INPUT_CALLBACK_ACTIONS] =
     {
@@ -38,11 +40,17 @@ static void callback_exec(struct fdset_input *fi, unsigned fd_index, enum fdset_
         callback_action_remove_fd
     };
     struct fdset_input_fd_info *fd_info = fi->fd_info_buffer + fd_index;
-    struct pollfd *pollfd = fi->pollfd_buffer + fd_index + 1;
-    enum fdset_input_callback_action action = fd_info->callback(pollfd->fd, fd_info->buffer, fd_info->buffer_used, status, fd_info->arg);
-    TRAP(action>=N_FDSET_INPUT_CALLBACK_ACTIONS, action_invalid, "action==%i", action);
-    if(callback_action_table[action]) callback_action_table[action](fi, fd_index);
+    enum fdset_input_callback_action action = FDSET_INPUT_CALLBACK_ACTION_NONE;
+    if(fd_info->callback)
+    {
+        struct pollfd *pollfd = fi->pollfd_buffer + fd_index + 1;
+        action = fd_info->callback(pollfd->fd, fd_info->buffer, fd_info->buffer_used, status, fd_info->arg);
+        TRAP(action>=N_FDSET_INPUT_CALLBACK_ACTIONS, action_invalid, "action==%i", action);
+        if(callback_action_table[action]) callback_action_table[action](fi, fd_index);
+    }
+    return action;
 trap_action_invalid:
+    return FDSET_INPUT_CALLBACK_ACTION_NONE;
 }
 
 static int fdset_input_thread(void *data)
@@ -82,20 +90,27 @@ static int fdset_input_thread(void *data)
             short revents = pollfd->revents;
             if(revents)
             {
-                struct fdset_input_fd_info *fd_info = fi->fd_info_buffer + i;
+                enum fdset_input_callback_action action_read_cb = FDSET_INPUT_CALLBACK_ACTION_NONE;
                 if(revents & POLLREADMASK)
                 {
+                    struct fdset_input_fd_info *fd_info = fi->fd_info_buffer + i;
                     uint8_t *buf_read = ((uint8_t*)fd_info->buffer) + fd_info->buffer_used;
                     /* Follow-up to poll() that indicated POLLIN for this fd; data is available so read should not block. */
                     ssize_t nread = read(pollfd->fd, buf_read, fd_info->buffer_size - fd_info->buffer_used);
                     if(nread > 0) fd_info->buffer_used += nread;
-                    if(fd_info->callback) callback_exec(fi, i, (nread < 0) ? FDSET_INPUT_STATUS_ERROR_READ : FDSET_INPUT_STATUS_OK);
+                    action_read_cb = callback_exec(fi, i, nread ? ((nread < 0) ? FDSET_INPUT_STATUS_ERROR_READ : FDSET_INPUT_STATUS_OK) : FDSET_INPUT_STATUS_ZERO_READ);
+                    // TODO: re-think
+                    if(action_read_cb == FDSET_INPUT_CALLBACK_ACTION_REMOVE_FD) i--;
                 }
-                if(revents & POLLERRMASK) if(fd_info->callback) callback_exec(fi, i, FDSET_INPUT_STATUS_ERROR_POLL);
-                if(revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) CRIT("unhandled flags in revents: 0x%04hx", revents);
-                nevents--;
+                if(action_read_cb != FDSET_INPUT_CALLBACK_ACTION_REMOVE_FD) // don't care anymore if fd has already been removed
+                {
+                    if(revents & POLLERRMASK) callback_exec(fi, i, FDSET_INPUT_STATUS_ERROR_POLL);
+                    if(revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) CRIT("unhandled flags in revents: 0x%04hx", revents);
+                    nevents--;
+                }
             }
         }
+        if(nevents) CRITF(nevents, "nevents==%i", nevents);
         status = mtx_unlock(&fi->mutex);
         TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
     }
