@@ -27,7 +27,7 @@ static enum fdset_input_callback_action on_data(int fd, void *buf, unsigned nbuf
 {
     (void)fd;
     (void)arg;
-    assert(status == FDSET_INPUT_STATUS_OK);
+    assert((status == FDSET_INPUT_STATUS_OK) || (status == FDSET_INPUT_STATUS_ZERO_READ));
     assert(nbuf <= BUF_SIZE);
     mtx_lock(&received_mtx);
     received_len = nbuf;

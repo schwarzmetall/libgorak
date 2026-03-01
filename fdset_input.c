@@ -89,7 +89,7 @@ static int fdset_input_thread(void *data)
                     /* Follow-up to poll() that indicated POLLIN for this fd; data is available so read should not block. */
                     ssize_t nread = read(pollfd->fd, buf_read, fd_info->buffer_size - fd_info->buffer_used);
                     if(nread > 0) fd_info->buffer_used += nread;
-                    if(fd_info->callback) callback_exec(fi, i, (nread < 0) ? FDSET_INPUT_STATUS_ERROR_READ : FDSET_INPUT_STATUS_OK);
+                    if(fd_info->callback) callback_exec(fi, i, nread ? ((nread < 0) ? FDSET_INPUT_STATUS_ERROR_READ : FDSET_INPUT_STATUS_OK) : FDSET_INPUT_STATUS_ZERO_READ);
                 }
                 if(revents & POLLERRMASK) if(fd_info->callback) callback_exec(fi, i, FDSET_INPUT_STATUS_ERROR_POLL);
                 if(revents & ~(POLLERRMASK | POLLREADMASK | POLLHUP)) CRIT("unhandled flags in revents: 0x%04hx", revents);
