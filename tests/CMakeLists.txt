@@ -20,3 +20,7 @@ add_test(NAME test_threadpool COMMAND test_threadpool)
 add_executable(test_timespec_ms test_timespec_ms.c)
 target_link_libraries(test_timespec_ms PRIVATE libgorak)
 add_test(NAME test_timespec_ms COMMAND test_timespec_ms)
+
+add_executable(test_bitmap test_bitmap.c)
+target_link_libraries(test_bitmap PRIVATE libgorak)
+add_test(NAME test_bitmap COMMAND test_bitmap)
