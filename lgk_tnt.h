@@ -63,15 +63,17 @@ extern volatile unsigned trace_output_level;
     #endif
 #endif
 
-#define TRACEP(level, print, ...) if(level<=LGK_TNT_OUTPUT_LEVEL) print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__)
+#define TRACEP(level, print, ...) {if(level<=LGK_TNT_OUTPUT_LEVEL) print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__);}
 #define TRACE(level, ...) TRACEP(level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #define TRACEF(level, func, fmt, ...) TRACE(level, #func"(): "fmt, __VA_ARGS__)
 #define TRACEFE(level, func) TRACEF(level, func, "%s", LGK_TNT_STRERROR(errno))
 #define TRAPLP(cond, label, level, print, ...)\
-    if(cond)\
     {\
-        TRACEP(level, print, __VA_ARGS__);\
-        goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
+        if(cond)\
+        {\
+            TRACEP(level, print, __VA_ARGS__);\
+            goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
+        }\
     }
 #define TRAPL(cond, label, level, ...) TRAPLP(cond, label, level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #define TRAPP(cond, label, print, ...) TRAPLP(cond, label, TRACE_LEVEL_CRITICAL, print, __VA_ARGS__)
@@ -99,9 +101,11 @@ extern volatile unsigned trace_output_level;
 #define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", LGK_TNT_STRERROR(errno))
 
 #define TRAP_SILENT(cond, label)\
-    if(cond)\
     {\
-        goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
-    }
+        if(cond)\
+        {\
+            goto JOIN(LGK_TNT_TRAP_LABEL_PREFIX, JOIN(_, label));\
+        }\
+    }\
 
 #endif
