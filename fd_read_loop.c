@@ -1,7 +1,6 @@
 /* Read until exactly count bytes or error/timeout. Uses poll() to avoid blocking. A return value != count indicates an error or timeout.
    On error, *err is set to -1 and errno contains the value set by the failing poll() or read() call. On success or timeout, *err is set to 0.*/
 #include <stdint.h>
-#include <errno.h>
 #include <poll.h>
 #include <unistd.h>
 #include <lgk_tnt.h>

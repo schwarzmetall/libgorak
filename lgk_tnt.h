@@ -63,7 +63,7 @@ extern volatile unsigned trace_output_level;
     #endif
 #endif
 
-#define TRACEP(level, print, ...) {if(level<=LGK_TNT_OUTPUT_LEVEL) print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__);}
+#define TRACEP(level, print, ...) ((level<=LGK_TNT_OUTPUT_LEVEL) ? print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__) : (void)0)
 #define TRACE(level, ...) TRACEP(level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #define TRACEF(level, func, fmt, ...) TRACE(level, #func"(): "fmt, __VA_ARGS__)
 #define TRACEFE(level, func) TRACEF(level, func, "%s", LGK_TNT_STRERROR(errno))
