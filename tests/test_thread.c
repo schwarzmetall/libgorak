@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <lgk_threads.h>
+#include <lgk/threads.h>
 
 #define TEST_RES_VALUE 42
 

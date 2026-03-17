@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.23)
 
 include(CMakeDependentOption)
 
@@ -18,24 +18,57 @@ else()
     message(WARNING "please add optimization flags for your compiler (\"${CMAKE_C_COMPILER_ID}\")")
 endif()
 
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_util.h")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_tnt.h" "tnt.c" "trace_print_default.c" "trace_print_default_nolevel.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_char.h" "char.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_bitmap.h" "bitmap.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_array.h" "array_find_int.c" "array_fill_int.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_date.h" "date_misc.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_timespec.h" "timespec_ms.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_fd.h" "fd_read_timed.c" "fd_write_timed.c" "fd_read_loop.c" "fd_write_loop.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue.h")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_ptr.h" "queue_ptr.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_int.h" "queue_int.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_queue_uint.h" "queue_uint.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threadpool.h" "threadpool.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_threads.h" "mtx_timedlock_ms.c" "mtx_timedlock_ts.c" "cnd_timedwait_ms.c" "cnd_timedwait_ts.c" "monitor.c" "thread.c" "thrdstrerror.c")
-set(LIBGORAK_SOURCES ${LIBGORAK_SOURCES} "lgk_fdset_input.h" "fdset_input.c")
+add_library(libgorak)
 
-add_library(libgorak ${LIBGORAK_SOURCES})
-target_include_directories(libgorak PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_sources(libgorak PUBLIC
+  FILE_SET headers TYPE HEADERS
+  BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+  FILES
+    include/lgk/array.h
+    include/lgk/bitmap.h
+    include/lgk/char.h
+    include/lgk/date.h
+    include/lgk/fd.h
+    include/lgk/fdset_input.h
+    include/lgk/fsm.h
+    include/lgk/queue.h
+    include/lgk/queue_int.h
+    include/lgk/queue_ptr.h
+    include/lgk/queue_uint.h
+    include/lgk/threadpool.h
+    include/lgk/threads.h
+    include/lgk/timespec.h
+    include/lgk/tnt.h
+    include/lgk/util.h
+)
+
+target_sources(libgorak PRIVATE
+  src/array_fill_int.c
+  src/array_find_int.c
+  src/bitmap.c
+  src/char.c
+  src/cnd_timedwait_ms.c
+  src/cnd_timedwait_ts.c
+  src/date_misc.c
+  src/fd_read_loop.c
+  src/fd_read_timed.c
+  src/fd_write_loop.c
+  src/fd_write_timed.c
+  src/fdset_input.c
+  src/monitor.c
+  src/mtx_timedlock_ms.c
+  src/mtx_timedlock_ts.c
+  src/queue_int.c
+  src/queue_ptr.c
+  src/queue_uint.c
+  src/thrdstrerror.c
+  src/thread.c
+  src/threadpool.c
+  src/timespec_ms.c
+  src/tnt.c
+  src/trace_print_default.c
+  src/trace_print_default_nolevel.c
+)
 
 # remove "lib" prefix since it's already part of the project name
 set_target_properties(libgorak PROPERTIES PREFIX "")

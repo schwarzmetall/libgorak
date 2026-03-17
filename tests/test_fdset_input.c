@@ -9,7 +9,7 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <lgk_fdset_input.h>
+#include <lgk/fdset_input.h>
 
 #define NMAX 32
 #define BUF_SIZE 256

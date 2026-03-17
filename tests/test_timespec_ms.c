@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <time.h>
 
-#include <lgk_timespec.h>
+#include <lgk/timespec.h>
 
 #define NSEC_PER_SEC (1000*1000*1000)
 

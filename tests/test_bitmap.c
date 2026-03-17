@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include <stddef.h>
-#include <lgk_bitmap.h>
+#include <lgk/bitmap.h>
 
 #define BITS 24
 

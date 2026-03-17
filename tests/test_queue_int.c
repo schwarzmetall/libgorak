@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <lgk_queue_int.h>
+#include <lgk/queue_int.h>
 
 #define QUEUE_SIZE 8192
 #define N_ITEMS    (QUEUE_SIZE << 6)

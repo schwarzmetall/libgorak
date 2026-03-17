@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <lgk_threadpool.h>
+#include <lgk/threadpool.h>
 
 #define N_THREADS  64u
 #define POOL_SIZE  1024u
