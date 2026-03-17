@@ -6,7 +6,7 @@
 
 #define FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
     typedef type_state name##_enter_handler(type_context context, type_state state);\
-    typedef type_state name##_event_handler(type_context context, type_state state, type_event event, type_event_event_data);\
+    typedef type_state name##_event_handler(type_context context, type_state state, type_event event, type_event_data event_data);\
     struct name\
     {\
 	    type_state current;\
@@ -72,7 +72,7 @@
     }
 
 #define FSM_FUNCTION_STEP(name)\
-    int_fast8_t fsm_step(struct name *fsm)\
+    int_fast8_t name##_step(struct name *fsm)\
     {\
         TRAPNULL(fsm);\
         TRAP(fsm->next<0, no_transition, "fsm->next==%i", (int)fsm->next);\
