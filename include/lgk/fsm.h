@@ -30,6 +30,8 @@
 #define FSM_PROTOTYPES(name, type_context, type_state, type_event, type_event_data)\
     type_state name##_event(struct name *fsm, type_event event, type_event_data event_data);\
     type_state name##_step(struct name *fsm);\
+    type_state name##_process(struct name *fsm);\
+    int_least8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data);\
     type_state name##_reset(struct name *fsm);\
     type_state name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states);
 
@@ -66,10 +68,42 @@
         return -1;\
     }
 
+#define FSM_FUNCTION_PROCESS(name, type_state)\
+    type_state name##_process(struct name *fsm)\
+    {\
+        type_state next = 0;\
+        do\
+        {\
+            next = name##_step(fsm);\
+            TRAPF(next<0, name##_step, "%i", (int)next);\
+        } while(next);\
+        return 0;\
+    trap_##name##_step:\
+        return -1;\
+    }
+
+#define FSM_FUNCTION_EVENT_PROCESS(name, type_state, type_event, type_event_data)\
+    int_least8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data)\
+    {\
+        type_state next = name##_event(fsm, event, event_data);\
+        TRAPF(next<0, name##_event, "%i", (int)next);\
+        if(next)\
+        {\
+            next = name##_process(fsm);\
+            TRAPF(next, name##_process, "%i", (int)next);\
+        }\
+        return 0;\
+    trap_##name##_process:\
+    trap_##name##_event:\
+        return -1;\
+    }
+
 #define FSM_FUNCTION_RESET(name, type_state)\
     type_state name##_reset(struct name *fsm)\
     {\
         TRAPNULL(fsm);\
+        fsm->current = 0;\
+        fsm->next = 0;\
         TRAPNULL_L(fsm->enter_handlers, enter_handlers);\
         TRAPNULL_L(fsm->enter_handlers[fsm->next], enter_handler);\
         fsm->current = 0;\
@@ -102,6 +136,8 @@
     FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
     static FSM_FUNCTION_EVENT(name, type_state, type_event, type_event_data)\
     static FSM_FUNCTION_STEP(name, type_state)\
+    static FSM_FUNCTION_PROCESS(name, type_state)\
+    [[maybe_unused]] static FSM_FUNCTION_EVENT_PROCESS(name, type_state, type_event, type_event_data)\
     static FSM_FUNCTION_RESET(name, type_state)\
     static FSM_FUNCTION_INIT(name, type_context, type_state)
 

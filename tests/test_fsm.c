@@ -381,6 +381,126 @@ static void test_step_enter_handler_out_of_range(void)
     assert(ret < 0);
 }
 
+/* ── process tests ──────────────────────────────────────────────────── */
+
+static void test_process(void)
+{
+    struct test_context ctx = {0};
+    struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
+    struct test_event_data data = {0};
+
+    tfsm_event(&fsm, EVENT_START, &data);
+    assert(fsm.next == STATE_RUNNING);
+
+    int_fast8_t ret = tfsm_process(&fsm);
+    assert(ret == 0);
+    assert(fsm.current == STATE_RUNNING);
+    assert(fsm.next == 0);
+    assert(ctx.enter_count == 2);
+}
+
+static void test_process_chained(void)
+{
+    struct test_context ctx = {0};
+    tfsm_enter_handler *eh[N_STATES] = { NULL, enter_auto_chain, enter_done };
+    struct tfsm fsm = make_fsm(&ctx, eh, g_event);
+    struct test_event_data data = {0};
+
+    tfsm_event(&fsm, EVENT_START, &data);
+
+    int_fast8_t ret = tfsm_process(&fsm);
+    assert(ret == 0);
+    assert(fsm.current == STATE_DONE);
+    assert(fsm.next == 0);
+    assert(ctx.enter_count == 2);
+}
+
+static void test_process_no_pending(void)
+{
+    struct test_context ctx = {0};
+    struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
+
+    int_fast8_t ret = tfsm_process(&fsm);
+    assert(ret < 0);
+}
+
+static void test_process_step_error(void)
+{
+    struct test_context ctx = {0};
+    tfsm_enter_handler *eh[N_STATES] = { NULL, enter_out_of_range, NULL };
+    struct tfsm fsm = make_fsm(&ctx, eh, g_event);
+    struct test_event_data data = {0};
+
+    tfsm_event(&fsm, EVENT_START, &data);
+
+    int_fast8_t ret = tfsm_process(&fsm);
+    assert(ret < 0);
+}
+
+/* ── event_process tests ────────────────────────────────────────────── */
+
+static void test_event_process(void)
+{
+    struct test_context ctx = {0};
+    struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
+    struct test_event_data data = {0};
+
+    int_fast8_t ret = tfsm_event_process(&fsm, EVENT_START, &data);
+    assert(ret == 0);
+    assert(fsm.current == STATE_RUNNING);
+    assert(fsm.next == 0);
+    assert(ctx.event_count == 1);
+    assert(ctx.enter_count == 2);
+}
+
+static void test_event_process_no_transition(void)
+{
+    struct test_context ctx = {0};
+    struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
+    struct test_event_data data = {0};
+
+    int_fast8_t ret = tfsm_event_process(&fsm, EVENT_FINISH, &data);
+    assert(ret == 0);
+    assert(fsm.current == STATE_IDLE);
+    assert(fsm.next == 0);
+}
+
+static void test_event_process_chained(void)
+{
+    struct test_context ctx = {0};
+    tfsm_enter_handler *eh[N_STATES] = { NULL, enter_auto_chain, enter_done };
+    struct tfsm fsm = make_fsm(&ctx, eh, g_event);
+    struct test_event_data data = {0};
+
+    int_fast8_t ret = tfsm_event_process(&fsm, EVENT_START, &data);
+    assert(ret == 0);
+    assert(fsm.current == STATE_DONE);
+    assert(ctx.enter_count == 2);
+}
+
+static void test_event_process_event_error(void)
+{
+    struct test_event_data data = {0};
+    int_fast8_t ret = tfsm_event_process(NULL, EVENT_START, &data);
+    assert(ret < 0);
+}
+
+static void test_event_process_full_cycle(void)
+{
+    struct test_context ctx = {0};
+    struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
+    struct test_event_data data = {0};
+
+    assert(tfsm_event_process(&fsm, EVENT_START, &data) == 0);
+    assert(fsm.current == STATE_RUNNING);
+
+    assert(tfsm_event_process(&fsm, EVENT_FINISH, &data) == 0);
+    assert(fsm.current == STATE_DONE);
+
+    assert(ctx.enter_count == 3);
+    assert(ctx.event_count == 2);
+}
+
 /* ── full cycle ─────────────────────────────────────────────────────── */
 
 static void test_full_cycle(void)
@@ -432,6 +552,17 @@ int main(void)
     test_step_null_enter_handler_entry();
     test_step_chained_transition();
     test_step_enter_handler_out_of_range();
+
+    test_process();
+    test_process_chained();
+    test_process_no_pending();
+    test_process_step_error();
+
+    test_event_process();
+    test_event_process_no_transition();
+    test_event_process_chained();
+    test_event_process_event_error();
+    test_event_process_full_cycle();
 
     test_full_cycle();
 
