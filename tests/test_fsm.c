@@ -16,12 +16,15 @@
 
 /* ── types used by the FSM ──────────────────────────────────────────── */
 
+enum tfsm_state_t : int_fast8_t { STATE_IDLE = 0, STATE_RUNNING, STATE_DONE, N_STATES };
+enum tfsm_event_t : uint_fast8_t { EVENT_START = 0, EVENT_FINISH };
+
 struct test_context
 {
     int enter_count;
     int event_count;
-    int_fast8_t last_enter_state;
-    int_fast8_t last_event;
+    enum tfsm_state_t last_enter_state;
+    enum tfsm_event_t last_event;
 };
 
 struct test_event_data
@@ -29,50 +32,34 @@ struct test_event_data
     int value;
 };
 
-enum { STATE_IDLE = 0, STATE_RUNNING, STATE_DONE, N_STATES };
-enum { EVENT_START = 0, EVENT_FINISH };
-
-/* FSM_PROTOTYPES expects name##_state_t */
-typedef int_fast8_t tfsm_state_t;
-
 /* ── instantiate the FSM ────────────────────────────────────────────── */
 
-FSM_TYPES(tfsm, struct test_context *, int_fast8_t, int_fast8_t,
-          struct test_event_data *)
-
-FSM_PROTOTYPES(tfsm, struct test_context *, int_fast8_t,
-               struct test_event_data *)
-
-FSM_FUNCTION_INIT(tfsm)
-FSM_FUNCTION_RESET(tfsm)
-FSM_FUNCTION_EVENT(tfsm, int_fast8_t, struct test_event_data *)
-FSM_FUNCTION_STEP(tfsm)
+FSM_STATIC(tfsm, struct test_context *, enum tfsm_state_t, enum tfsm_event_t, struct test_event_data *)
 
 /* ── handlers ───────────────────────────────────────────────────────── */
 
-static int_fast8_t enter_idle(struct test_context *ctx, int_fast8_t state)
+static enum tfsm_state_t enter_idle(struct test_context *ctx, enum tfsm_state_t state)
 {
     ctx->enter_count++;
     ctx->last_enter_state = state;
     return -1;
 }
 
-static int_fast8_t enter_running(struct test_context *ctx, int_fast8_t state)
+static enum tfsm_state_t enter_running(struct test_context *ctx, enum tfsm_state_t state)
 {
     ctx->enter_count++;
     ctx->last_enter_state = state;
     return -1;
 }
 
-static int_fast8_t enter_done(struct test_context *ctx, int_fast8_t state)
+static enum tfsm_state_t enter_done(struct test_context *ctx, enum tfsm_state_t state)
 {
     ctx->enter_count++;
     ctx->last_enter_state = state;
     return -1;
 }
 
-static int_fast8_t event_idle(struct test_context *ctx, int_fast8_t state,
-                              int_fast8_t event, struct test_event_data *data)
+static enum tfsm_state_t event_idle(struct test_context *ctx, enum tfsm_state_t state, enum tfsm_event_t event, struct test_event_data *data)
 {
     (void)state;
     (void)data;
@@ -82,9 +69,7 @@ static int_fast8_t event_idle(struct test_context *ctx, int_fast8_t state,
     return -1;
 }
 
-static int_fast8_t event_running(struct test_context *ctx, int_fast8_t state,
-                                 int_fast8_t event,
-                                 struct test_event_data *data)
+static enum tfsm_state_t event_running(struct test_context *ctx, enum tfsm_state_t state, enum tfsm_event_t event, struct test_event_data *data)
 {
     (void)state;
     (void)data;
@@ -94,8 +79,7 @@ static int_fast8_t event_running(struct test_context *ctx, int_fast8_t state,
     return -1;
 }
 
-static int_fast8_t event_done(struct test_context *ctx, int_fast8_t state,
-                              int_fast8_t event, struct test_event_data *data)
+static enum tfsm_state_t event_done(struct test_context *ctx, enum tfsm_state_t state, enum tfsm_event_t event, struct test_event_data *data)
 {
     (void)state;
     (void)event;
@@ -105,8 +89,7 @@ static int_fast8_t event_done(struct test_context *ctx, int_fast8_t state,
 }
 
 /* enter handler that triggers a chained transition */
-static int_fast8_t enter_auto_chain(struct test_context *ctx,
-                                    int_fast8_t state)
+static enum tfsm_state_t enter_auto_chain(struct test_context *ctx, enum tfsm_state_t state)
 {
     (void)state;
     ctx->enter_count++;
@@ -114,8 +97,7 @@ static int_fast8_t enter_auto_chain(struct test_context *ctx,
 }
 
 /* enter handler that returns an out-of-range state */
-static int_fast8_t enter_out_of_range(struct test_context *ctx,
-                                      int_fast8_t state)
+static enum tfsm_state_t enter_out_of_range(struct test_context *ctx, enum tfsm_state_t state)
 {
     (void)ctx;
     (void)state;

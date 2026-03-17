@@ -3,28 +3,30 @@
 
 #include <stdint.h>
 #include <lgk/tnt.h>
+#include <lgk/util.h>
 
 #define FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
+    ASSERT_SIGNED(type_state);\
     typedef type_state name##_enter_handler(type_context context, type_state state);\
     typedef type_state name##_event_handler(type_context context, type_state state, type_event event, type_event_data event_data);\
     struct name\
     {\
 	    type_state current;\
-        type_state  next;\
+        type_state next;\
     	type_context context;\
     	name##_enter_handler **enter_handlers;\
     	name##_event_handler **event_handlers;\
     	type_state n_states;\
     };
 
-#define FSM_PROTOTYPES(name, type_context, type_event, type_event_data)\
-    int_fast8_t name##_init(struct name *fsm, void *context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, name##_state_t n_states);\
+#define FSM_PROTOTYPES(name, type_context, type_state, type_event, type_event_data)\
+    int_fast8_t name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states);\
     int_fast8_t name##_reset(struct name *fsm);\
     int_fast8_t name##_event(struct name *fsm, type_event event, type_event_data event_data);\
     int_fast8_t name##_step(struct name *fsm);
 
-#define FSM_FUNCTION_INIT(name)\
-    int_fast8_t name##_init(struct name *fsm, void *context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, name##_state_t n_states)\
+#define FSM_FUNCTION_INIT(name, type_context, type_state)\
+    int_fast8_t name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states)\
     {\
         TRAPNULL(enter_handlers);\
         TRAPNULL(event_handlers);\
@@ -93,7 +95,11 @@
         return -1;\
     }
 
-/*sm_state_t sm_current(const struct sm *sm);
-sm_state_t sm_get_pending(const struct sm *sm);*/
+#define FSM_STATIC(name, type_context, type_state, type_event, type_event_data)\
+    FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
+    static FSM_FUNCTION_INIT(name, type_context, type_state)\
+    static FSM_FUNCTION_RESET(name)\
+    static FSM_FUNCTION_EVENT(name, type_event, type_event_data)\
+    static FSM_FUNCTION_STEP(name)
 
 #endif
