@@ -28,87 +28,81 @@
     };
 
 #define FSM_PROTOTYPES(name, type_context, type_state, type_event, type_event_data)\
-    int_fast8_t name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states);\
-    int_fast8_t name##_reset(struct name *fsm);\
-    int_fast8_t name##_event(struct name *fsm, type_event event, type_event_data event_data);\
-    int_fast8_t name##_step(struct name *fsm);
+    type_state name##_event(struct name *fsm, type_event event, type_event_data event_data);\
+    type_state name##_step(struct name *fsm);\
+    type_state name##_reset(struct name *fsm);\
+    type_state name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states);
 
-#define FSM_FUNCTION_INIT(name, type_context, type_state)\
-    int_fast8_t name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states)\
+#define FSM_FUNCTION_EVENT(name, type_state, type_event, type_event_data)\
+    type_state name##_event(struct name *fsm, type_event event, type_event_data event_data)\
     {\
-        TRAPNULL(enter_handlers);\
-        TRAPNULL(event_handlers);\
+        TRAPNULL(fsm);\
+        TRAP(fsm->next, next_not_zero, "fsm->next==%i", (int)fsm->next);\
+        TRAP((fsm->current<0)||(fsm->current>=fsm->n_states), current_invalid, "fsm->current==%i", (int)fsm->current);\
+        TRAPNULL_L(fsm->event_handlers, event_handlers);\
+        TRAPNULL_L(fsm->event_handlers[fsm->current], event_handler);\
+        return fsm->next = fsm->event_handlers[fsm->current](fsm->context, fsm->current, event, event_data);\
+    trap_event_handler_null:\
+    trap_event_handlers_null:\
+    trap_current_invalid:\
+    trap_next_not_zero:\
+    trap_fsm_null:\
+        return -1;\
+    }
+
+#define FSM_FUNCTION_STEP(name, type_state)\
+    type_state name##_step(struct name *fsm)\
+    {\
+        TRAPNULL(fsm);\
+        TRAP((fsm->next<=0)||(fsm->next>=fsm->n_states), next_invalid, "fsm->next==%i", (int)fsm->next);\
+        TRAPNULL_L(fsm->enter_handlers, enter_handlers);\
+        TRAPNULL_L(fsm->enter_handlers[fsm->next], enter_handler);\
+        fsm->current = fsm->next;\
+        return fsm->next = fsm->enter_handlers[fsm->current](fsm->context, fsm->current);\
+    trap_enter_handler_null:\
+    trap_enter_handlers_null:\
+    trap_next_invalid:\
+    trap_fsm_null:\
+        return -1;\
+    }
+
+#define FSM_FUNCTION_RESET(name, type_state)\
+    type_state name##_reset(struct name *fsm)\
+    {\
+        TRAPNULL(fsm);\
+        TRAPNULL_L(fsm->enter_handlers, enter_handlers);\
+        TRAPNULL_L(fsm->enter_handlers[fsm->next], enter_handler);\
         fsm->current = 0;\
         fsm->next = 0;\
+        return fsm->next = fsm->enter_handlers[0](fsm->context, 0);\
+    trap_enter_handler_null:\
+    trap_enter_handlers_null:\
+    trap_fsm_null:\
+        return -1;\
+    }
+
+#define FSM_FUNCTION_INIT(name, type_context, type_state)\
+    type_state name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states)\
+    {\
+        TRAPNULL(fsm);\
+        TRAPNULL(enter_handlers);\
+        TRAPNULL(event_handlers);\
         fsm->context = context;\
         fsm->enter_handlers = enter_handlers;\
         fsm->event_handlers = event_handlers;\
         fsm->n_states = n_states;\
-        /*TODO shall we call the init handler right away?*/\
-        return 0;\
+        return name##_reset(fsm);\
     trap_enter_handlers_null:\
     trap_event_handlers_null:\
-        return -1;\
-    }
-
-#define FSM_FUNCTION_RESET(name)\
-    int_fast8_t name##_reset(struct name *fsm)\
-    {\
-        TRAPNULL(fsm);\
-        fsm->current = 0;\
-        fsm->next = 0;\
-        /*TODO shall we call the init handler right away?*/\
-        return 0;\
-    trap_fsm_null:\
-        return -1;\
-    }
-
-#define FSM_FUNCTION_EVENT(name, type_event, type_event_data)\
-    int_fast8_t name##_event(struct name *fsm, type_event event, type_event_data event_data)\
-    {\
-        TRAPNULL(fsm);\
-        TRAP((fsm->current<0)||(fsm->current>=fsm->n_states), current_range, "fsm->current==%i out of range", (int)fsm->current);\
-        TRAP(fsm->next>0, in_transition, "fsm->next==%i", (int)fsm->next);\
-        name##_event_handler **event_handlers = fsm->event_handlers;\
-        TRAPNULL(event_handlers);\
-        name##_event_handler *event_handler = event_handlers[fsm->current];\
-        TRAPNULL(event_handler);\
-        return fsm->next = event_handler(fsm->context, fsm->current, event, event_data);\
-    trap_event_handler_null:\
-    trap_event_handlers_null:\
-    trap_in_transition:\
-    trap_current_range:\
-    trap_fsm_null:\
-        return -1;\
-    }
-
-#define FSM_FUNCTION_STEP(name)\
-    int_fast8_t name##_step(struct name *fsm)\
-    {\
-        TRAPNULL(fsm);\
-        TRAPVEQ(fsm->next, 0, no_transition_scheduled);\
-        fsm->current = fsm->next;\
-        fsm->next = 0;\
-        if(fsm->enter_handlers)\
-        {\
-            if(fsm->enter_handlers[fsm->current])\
-            {\
-                fsm->next = fsm->enter_handlers[fsm->current](fsm->context, fsm->current);\
-                TRAP(fsm->next>=fsm->n_states, fsm_next_range, "fsm->next==%i", (int)fsm->next);\
-            }\
-        }\
-        return fsm->next;\
-    trap_fsm_next_range:\
-    trap_no_transition_scheduled:\
     trap_fsm_null:\
         return -1;\
     }
 
 #define FSM_STATIC(name, type_context, type_state, type_event, type_event_data)\
     FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
-    static FSM_FUNCTION_INIT(name, type_context, type_state)\
-    static FSM_FUNCTION_RESET(name)\
-    static FSM_FUNCTION_EVENT(name, type_event, type_event_data)\
-    static FSM_FUNCTION_STEP(name)
+    static FSM_FUNCTION_EVENT(name, type_state, type_event, type_event_data)\
+    static FSM_FUNCTION_STEP(name, type_state)\
+    static FSM_FUNCTION_RESET(name, type_state)\
+    static FSM_FUNCTION_INIT(name, type_context, type_state)
 
 #endif

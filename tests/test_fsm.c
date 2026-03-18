@@ -155,12 +155,12 @@ static void test_init_null_event_handlers(void)
     assert(ret < 0);
 }
 
-static void test_init_null_context(void)
+static void test_init_null_enter_handler(void)
 {
+    tfsm_enter_handler *eh[N_STATES] = { NULL, enter_running, enter_done };
     struct tfsm fsm;
-    int_fast8_t ret = tfsm_init(&fsm, NULL, g_enter, g_event, N_STATES);
-    assert(ret == 0);
-    assert(fsm.context == NULL);
+    int_fast8_t ret = tfsm_init(&fsm, NULL, eh, g_event, N_STATES);
+    assert(ret < 0);
 }
 
 /* ── reset tests ────────────────────────────────────────────────────── */
@@ -297,7 +297,7 @@ static void test_step(void)
     assert(ret == 0);
     assert(fsm.current == STATE_RUNNING);
     assert(fsm.next == 0);
-    assert(ctx.enter_count == 1);
+    assert(ctx.enter_count == 2);
     assert(ctx.last_enter_state == STATE_RUNNING);
 }
 
@@ -326,9 +326,7 @@ static void test_step_null_enter_handlers_table(void)
     fsm.enter_handlers = NULL;
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == 0);
+    assert(ret < 0);
 }
 
 static void test_step_null_enter_handler_entry(void)
@@ -341,9 +339,7 @@ static void test_step_null_enter_handler_entry(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == STATE_RUNNING);
-    assert(ctx.enter_count == 0);
+    assert(ret < 0);
 }
 
 static void test_step_chained_transition(void)
@@ -377,6 +373,11 @@ static void test_step_enter_handler_out_of_range(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_step(&fsm);
+    assert(ret == N_STATES);
+    assert(fsm.current == STATE_RUNNING);
+    assert(fsm.next == N_STATES);
+
+    ret = tfsm_step(&fsm);
     assert(ret < 0);
 }
 
@@ -398,7 +399,7 @@ static void test_full_cycle(void)
     assert(tfsm_step(&fsm) == 0);
     assert(fsm.current == STATE_DONE);
 
-    assert(ctx.enter_count == 2);
+    assert(ctx.enter_count == 3);
     assert(ctx.event_count == 2);
 }
 
@@ -409,7 +410,7 @@ int main(void)
     test_init();
     test_init_null_enter_handlers();
     test_init_null_event_handlers();
-    test_init_null_context();
+    test_init_null_enter_handler();
 
     test_reset();
     test_reset_null();
