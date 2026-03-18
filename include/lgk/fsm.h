@@ -5,6 +5,14 @@
 #include <lgk/tnt.h>
 #include <lgk/util.h>
 
+/** TODO documentation
+  * - type_state has to be a signed integer type (preferrably an enum based on a signed type)
+  * - state "0" is init/reset state, fsm will always start in that state, handlers cannot initiate transition to that state.
+  * - if using an enum as type_state (recommended), it shall not have "gaps", shall define only positive values and zero; negative values are reserved to signal errors
+  * - transition to reset/init state shall be performed from "outside" by calling xyz_reset() (usually in error case)
+  * 
+  */
+
 #define FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
     ASSERT_SIGNED(type_state);\
     typedef type_state name##_enter_handler(type_context context, type_state state);\
@@ -31,11 +39,12 @@
         TRAPNULL(enter_handlers);\
         TRAPNULL(event_handlers);\
         fsm->current = 0;\
-        fsm->next = -1;\
+        fsm->next = 0;\
         fsm->context = context;\
         fsm->enter_handlers = enter_handlers;\
         fsm->event_handlers = event_handlers;\
         fsm->n_states = n_states;\
+        /*TODO shall we call the init handler right away?*/\
         return 0;\
     trap_enter_handlers_null:\
     trap_event_handlers_null:\
@@ -47,7 +56,8 @@
     {\
         TRAPNULL(fsm);\
         fsm->current = 0;\
-        fsm->next = -1;\
+        fsm->next = 0;\
+        /*TODO shall we call the init handler right away?*/\
         return 0;\
     trap_fsm_null:\
         return -1;\
@@ -58,13 +68,12 @@
     {\
         TRAPNULL(fsm);\
         TRAP((fsm->current<0)||(fsm->current>=fsm->n_states), current_range, "fsm->current==%i out of range", (int)fsm->current);\
-        TRAP(fsm->next>=0, in_transition, "fsm->next==%i", (int)fsm->next);\
+        TRAP(fsm->next>0, in_transition, "fsm->next==%i", (int)fsm->next);\
         name##_event_handler **event_handlers = fsm->event_handlers;\
         TRAPNULL(event_handlers);\
         name##_event_handler *event_handler = event_handlers[fsm->current];\
         TRAPNULL(event_handler);\
-        fsm->next = event_handler(fsm->context, fsm->current, event, event_data);\
-        return (fsm->next >= 0);\
+        return fsm->next = event_handler(fsm->context, fsm->current, event, event_data);\
     trap_event_handler_null:\
     trap_event_handlers_null:\
     trap_in_transition:\
@@ -77,9 +86,9 @@
     int_fast8_t name##_step(struct name *fsm)\
     {\
         TRAPNULL(fsm);\
-        TRAP(fsm->next<0, no_transition, "fsm->next==%i", (int)fsm->next);\
+        TRAPVEQ(fsm->next, 0, no_transition_scheduled);\
         fsm->current = fsm->next;\
-        fsm->next = -1;\
+        fsm->next = 0;\
         if(fsm->enter_handlers)\
         {\
             if(fsm->enter_handlers[fsm->current])\
@@ -88,9 +97,9 @@
                 TRAP(fsm->next>=fsm->n_states, fsm_next_range, "fsm->next==%i", (int)fsm->next);\
             }\
         }\
-        return (fsm->next >= 0);\
+        return fsm->next;\
     trap_fsm_next_range:\
-    trap_no_transition:\
+    trap_no_transition_scheduled:\
     trap_fsm_null:\
         return -1;\
     }

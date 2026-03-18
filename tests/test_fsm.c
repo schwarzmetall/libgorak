@@ -42,21 +42,21 @@ static enum tfsm_state_t enter_idle(struct test_context *ctx, enum tfsm_state_t 
 {
     ctx->enter_count++;
     ctx->last_enter_state = state;
-    return -1;
+    return 0;
 }
 
 static enum tfsm_state_t enter_running(struct test_context *ctx, enum tfsm_state_t state)
 {
     ctx->enter_count++;
     ctx->last_enter_state = state;
-    return -1;
+    return 0;
 }
 
 static enum tfsm_state_t enter_done(struct test_context *ctx, enum tfsm_state_t state)
 {
     ctx->enter_count++;
     ctx->last_enter_state = state;
-    return -1;
+    return 0;
 }
 
 static enum tfsm_state_t event_idle(struct test_context *ctx, enum tfsm_state_t state, enum tfsm_event_t event, struct test_event_data *data)
@@ -66,7 +66,7 @@ static enum tfsm_state_t event_idle(struct test_context *ctx, enum tfsm_state_t 
     ctx->event_count++;
     ctx->last_event = event;
     if (event == EVENT_START) return STATE_RUNNING;
-    return -1;
+    return 0;
 }
 
 static enum tfsm_state_t event_running(struct test_context *ctx, enum tfsm_state_t state, enum tfsm_event_t event, struct test_event_data *data)
@@ -76,7 +76,7 @@ static enum tfsm_state_t event_running(struct test_context *ctx, enum tfsm_state
     ctx->event_count++;
     ctx->last_event = event;
     if (event == EVENT_FINISH) return STATE_DONE;
-    return -1;
+    return 0;
 }
 
 static enum tfsm_state_t event_done(struct test_context *ctx, enum tfsm_state_t state, enum tfsm_event_t event, struct test_event_data *data)
@@ -85,7 +85,7 @@ static enum tfsm_state_t event_done(struct test_context *ctx, enum tfsm_state_t 
     (void)event;
     (void)data;
     ctx->event_count++;
-    return -1;
+    return 0;
 }
 
 /* enter handler that triggers a chained transition */
@@ -132,7 +132,7 @@ static void test_init(void)
     int_fast8_t ret = tfsm_init(&fsm, &ctx, g_enter, g_event, N_STATES);
     assert(ret == 0);
     assert(fsm.current == 0);
-    assert(fsm.next == -1);
+    assert(fsm.next == 0);
     assert(fsm.context == &ctx);
     assert(fsm.n_states == N_STATES);
     assert(fsm.enter_handlers == g_enter);
@@ -175,7 +175,7 @@ static void test_reset(void)
     int_fast8_t ret = tfsm_reset(&fsm);
     assert(ret == 0);
     assert(fsm.current == 0);
-    assert(fsm.next == -1);
+    assert(fsm.next == 0);
 }
 
 static void test_reset_null(void)
@@ -207,7 +207,7 @@ static void test_event_no_transition(void)
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_FINISH, &data);
     assert(ret == 0);
-    assert(fsm.next == -1);
+    assert(fsm.next == 0);
 }
 
 static void test_event_with_null_data(void)
@@ -296,7 +296,7 @@ static void test_step(void)
     int_fast8_t ret = tfsm_step(&fsm);
     assert(ret == 0);
     assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == -1);
+    assert(fsm.next == 0);
     assert(ctx.enter_count == 1);
     assert(ctx.last_enter_state == STATE_RUNNING);
 }
@@ -328,7 +328,7 @@ static void test_step_null_enter_handlers_table(void)
     int_fast8_t ret = tfsm_step(&fsm);
     assert(ret == 0);
     assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == -1);
+    assert(fsm.next == 0);
 }
 
 static void test_step_null_enter_handler_entry(void)
@@ -356,14 +356,14 @@ static void test_step_chained_transition(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret == 1);
+    assert(ret == STATE_DONE);
     assert(fsm.current == STATE_RUNNING);
     assert(fsm.next == STATE_DONE);
 
     ret = tfsm_step(&fsm);
     assert(ret == 0);
     assert(fsm.current == STATE_DONE);
-    assert(fsm.next == -1);
+    assert(fsm.next == 0);
     assert(ctx.enter_count == 2);
 }
 
@@ -394,7 +394,7 @@ static void test_full_cycle(void)
     assert(tfsm_step(&fsm) == 0);
     assert(fsm.current == STATE_RUNNING);
 
-    assert(tfsm_event(&fsm, EVENT_FINISH, &data) == 1);
+    assert(tfsm_event(&fsm, EVENT_FINISH, &data) == STATE_DONE);
     assert(tfsm_step(&fsm) == 0);
     assert(fsm.current == STATE_DONE);
 
