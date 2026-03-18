@@ -48,7 +48,7 @@ enum trace_level : uint_fast8_t
     TRACE_LEVEL_INFO,
     TRACE_LEVEL_DEBUG
 };
-typedef void lgk_tnt_print_t(const char *file, unsigned line, enum trace_level level, const char *format, ...);
+typedef void lgk_tnt_print_t(const char *file, unsigned line, const char *function, enum trace_level level, const char *format, ...);
 
 lgk_tnt_print_t lgk_tnt_print_default;
 lgk_tnt_print_t lgk_tnt_print_default_nolevel;
@@ -64,7 +64,7 @@ extern volatile unsigned trace_output_level;
     #endif
 #endif
 
-#define TRACEP(level, print, ...) ((level<=LGK_TNT_OUTPUT_LEVEL) ? print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, level, __VA_ARGS__) : (void)0)
+#define TRACEP(level, print, ...) ((level<=LGK_TNT_OUTPUT_LEVEL) ? print(LGK_TNT_FILE_NAME_MANGLE(__FILE__), __LINE__, __func__, level, __VA_ARGS__) : (void)0)
 #define TRACE(level, ...) TRACEP(level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
 #define TRACEF(level, func, fmt, ...) TRACE(level, #func"(): "fmt, __VA_ARGS__)
 #define TRACEFE(level, func) TRACEF(level, func, "%s", LGK_TNT_STRERROR(errno))

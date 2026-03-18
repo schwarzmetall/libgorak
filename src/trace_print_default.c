@@ -4,14 +4,14 @@
 #include <lgk/tnt.h>
 #include <lgk/util.h>
 
-void lgk_tnt_print_default(const char *file, unsigned line, enum trace_level level, const char *format, ...)
+void lgk_tnt_print_default(const char *file, unsigned line, const char *function, enum trace_level level, const char *format, ...)
 {
     static const char *const level_tags[] = {"CRITICAL", "ERROR   ", "WARNING ", "INFO    ", "DEBUG   "};
     static const char *const tag_fallback = "INV";
     const char *const tag = (level < ASIZE(level_tags)) ? level_tags[level] : tag_fallback;
     va_list ap;
     va_start(ap, format);
-    fprintf(stderr,"[%s] %s:%d: ", tag, file, line);
+    fprintf(stderr,"[%s] %s:%d:%s(): ", tag, file, line, function);
     vfprintf(stderr, format, ap);
     fprintf(stderr, "\n");
 }

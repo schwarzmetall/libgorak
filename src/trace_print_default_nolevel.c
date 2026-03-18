@@ -4,12 +4,12 @@
 #include <lgk/tnt.h>
 #include <lgk/util.h>
 
-void lgk_tnt_print_default_nolevel(const char *file, unsigned line, enum trace_level level, const char *format, ...)
+void lgk_tnt_print_default_nolevel(const char *file, unsigned line, const char *function, enum trace_level level, const char *format, ...)
 {
     (void)level;
     va_list ap;
     va_start(ap, format);
-    fprintf(stderr,"%s:%d: ", file, line);
+    fprintf(stderr,"%s:%d:%s(): ", file, line, function);
     vfprintf(stderr, format, ap);
     fprintf(stderr, "\n");
 }
