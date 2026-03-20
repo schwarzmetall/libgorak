@@ -147,14 +147,6 @@ static void test_init_null_enter_handlers(void)
     assert(ret < 0);
 }
 
-static void test_init_null_event_handlers(void)
-{
-    struct test_context ctx = {0};
-    struct tfsm fsm;
-    int_fast8_t ret = tfsm_init(&fsm, &ctx, g_enter, NULL, N_STATES);
-    assert(ret < 0);
-}
-
 static void test_init_null_enter_handler(void)
 {
     tfsm_enter_handler *eh[N_STATES] = { NULL, enter_running, enter_done };
@@ -268,7 +260,7 @@ static void test_event_null_handler_entry(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(ret < 0);
+    assert(!ret);
 }
 
 static void test_event_null_handlers_table(void)
@@ -279,7 +271,7 @@ static void test_event_null_handlers_table(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(ret < 0);
+    assert(!ret);
 }
 
 /* ── step tests ─────────────────────────────────────────────────────── */
@@ -529,7 +521,6 @@ int main(void)
 {
     test_init();
     test_init_null_enter_handlers();
-    test_init_null_event_handlers();
     test_init_null_enter_handler();
 
     test_reset();

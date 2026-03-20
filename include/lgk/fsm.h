@@ -22,8 +22,8 @@
 	    type_state current;\
         type_state next;\
     	type_context context;\
-    	name##_enter_handler **enter_handlers;\
-    	name##_event_handler **event_handlers;\
+        name##_enter_handler *const *enter_handlers;\
+        name##_event_handler *const *event_handlers;\
     	type_state n_states;\
     };
 
@@ -33,7 +33,7 @@
     type_state name##_process(struct name *fsm);\
     int_least8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data);\
     type_state name##_reset(struct name *fsm);\
-    type_state name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states);
+    type_state name##_init(struct name *fsm, type_context context, name##_enter_handler *const *enter_handlers, name##_event_handler *const *event_handlers, type_state n_states);
 
 #define FSM_FUNCTION_EVENT(name, type_state, type_event, type_event_data)\
     type_state name##_event(struct name *fsm, type_event event, type_event_data event_data)\
@@ -41,11 +41,9 @@
         TRAPNULL(fsm);\
         TRAP(fsm->next, next_not_zero, "fsm->next==%i", (int)fsm->next);\
         TRAP((fsm->current<0)||(fsm->current>=fsm->n_states), current_invalid, "fsm->current==%i", (int)fsm->current);\
-        TRAPNULL_L(fsm->event_handlers, event_handlers);\
-        TRAPNULL_L(fsm->event_handlers[fsm->current], event_handler);\
-        return fsm->next = fsm->event_handlers[fsm->current](fsm->context, fsm->current, event, event_data);\
-    trap_event_handler_null:\
-    trap_event_handlers_null:\
+        if(fsm->event_handlers) if(fsm->event_handlers[fsm->current]) return fsm->next = fsm->event_handlers[fsm->current](fsm->context, fsm->current, event, event_data);\
+        WARN("no event handler for event %i", (int)event);\
+        return 0;\
     trap_current_invalid:\
     trap_next_not_zero:\
     trap_fsm_null:\
@@ -116,18 +114,16 @@
     }
 
 #define FSM_FUNCTION_INIT(name, type_context, type_state)\
-    type_state name##_init(struct name *fsm, type_context context, name##_enter_handler **enter_handlers, name##_event_handler **event_handlers, type_state n_states)\
+    type_state name##_init(struct name *fsm, type_context context, name##_enter_handler *const *enter_handlers, name##_event_handler *const *event_handlers, type_state n_states)\
     {\
         TRAPNULL(fsm);\
         TRAPNULL(enter_handlers);\
-        TRAPNULL(event_handlers);\
         fsm->context = context;\
         fsm->enter_handlers = enter_handlers;\
         fsm->event_handlers = event_handlers;\
         fsm->n_states = n_states;\
         return name##_reset(fsm);\
     trap_enter_handlers_null:\
-    trap_event_handlers_null:\
     trap_fsm_null:\
         return -1;\
     }
