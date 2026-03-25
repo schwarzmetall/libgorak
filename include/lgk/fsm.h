@@ -128,13 +128,16 @@
         return -1;\
     }
 
-#define FSM_STATIC(name, type_context, type_state, type_event, type_event_data)\
-    FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
+#define FSM_FUNCTIONS_STATIC(name, type_context, type_state, type_event, type_event_data)\
     static FSM_FUNCTION_EVENT(name, type_state, type_event, type_event_data)\
     static FSM_FUNCTION_STEP(name, type_state)\
     static FSM_FUNCTION_PROCESS(name, type_state)\
     [[maybe_unused]] static FSM_FUNCTION_EVENT_PROCESS(name, type_state, type_event, type_event_data)\
     static FSM_FUNCTION_RESET(name, type_state)\
     static FSM_FUNCTION_INIT(name, type_context, type_state)
+
+#define FSM_STATIC(name, type_context, type_state, type_event, type_event_data)\
+    FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
+    FSM_FUNCTIONS_STATIC(name, type_context, type_state, type_event, type_event_data)
 
 #endif
