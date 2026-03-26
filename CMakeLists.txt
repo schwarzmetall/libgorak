@@ -8,14 +8,21 @@ set(CMAKE_C_EXTENSIONS FALSE)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
-project(libgorak LANGUAGES C)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type")
+endif()
 
-if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-Wall -Wextra -pedantic)
-    add_compile_options(-O3 -ffast-math)
-    add_compile_options(-march=native)
+project(libgorak VERSION 0.1.0 LANGUAGES C)
+
+set(MARCH "native" CACHE STRING "Target CPU for -march (empty for generic)")
+
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wall -Wextra -pedantic -ffast-math)
+    if(MARCH)
+        add_compile_options(-march=${MARCH})
+    endif()
 else()
-    message(WARNING "please add optimization flags for your compiler (\"${CMAKE_C_COMPILER_ID}\")")
+    message(WARNING "please add warning/optimization flags for your compiler (\"${CMAKE_C_COMPILER_ID}\")")
 endif()
 
 add_library(libgorak)
