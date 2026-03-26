@@ -3,7 +3,7 @@
  * Run: ctest (from build dir) or cmake --build build && ctest --test-dir build
  */
 
-#include <assert.h>
+#include "test.h"
 #include <stdint.h>
 #include <threads.h>
 
@@ -63,32 +63,32 @@ static void work_done_store_by_index(void *work_data, int result)
 static void test_threadpool_init_close_empty(void)
 {
     int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     status = threadpool_close(&tp, QUEUE_TIMEOUT_MS, 1);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 }
 
 static void test_threadpool_schedule_single(void)
 {
     int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     int result_slot = -1;
     struct work_with_slot w = { &result_slot, 42 };
     status = threadpool_schedule_work(&tp, work_start_with_slot, work_done_callback_with_slot, &w);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     status = threadpool_close(&tp, QUEUE_TIMEOUT_MS, 1);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
-    assert(result_slot == 42);
+    test_assert(result_slot == 42);
 }
 
 static void test_threadpool_schedule_multiple(void)
 {
     int status = threadpool_init(&tp, &tp_buffer_info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     /* Schedule more work than pool size to verify items are returned to the pool and reused. */
     for (unsigned i = 0; i < N_JOBS_MULTI; i++)
@@ -96,14 +96,14 @@ static void test_threadpool_schedule_multiple(void)
 
     for (unsigned i = 0; i < N_JOBS_MULTI; i++) {
         status = threadpool_schedule_work(&tp, work_start_return_index, work_done_store_by_index, (void *)(uintptr_t)i);
-        assert(status == thrd_success);
+        test_assert(status == thrd_success);
     }
 
     status = threadpool_close(&tp, QUEUE_TIMEOUT_MS, 1);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     for (unsigned i = 0; i < N_JOBS_MULTI; i++)
-        assert(multi_results[i] == (int)i);
+        test_assert(multi_results[i] == (int)i);
 }
 
 static void test_threadpool_null_init_returns_error(void)
@@ -115,19 +115,19 @@ static void test_threadpool_null_init_returns_error(void)
         tp_work_buffer
     };
     int status = threadpool_init(NULL, &info, N_THREADS, POOL_SIZE, 1, QUEUE_TIMEOUT_MS);
-    assert(status == thrd_error);
+    test_assert(status == thrd_error);
 }
 
 static void test_threadpool_null_close_returns_error(void)
 {
     int status = threadpool_close(NULL, QUEUE_TIMEOUT_MS, 1);
-    assert(status == thrd_error);
+    test_assert(status == thrd_error);
 }
 
 static void test_threadpool_null_schedule_returns_error(void)
 {
     int status = threadpool_schedule_work(NULL, work_start_return_value, work_done_callback, NULL);
-    assert(status == thrd_error);
+    test_assert(status == thrd_error);
 }
 
 int main(void)

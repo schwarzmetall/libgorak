@@ -8,7 +8,7 @@
  * Run: ctest (from build dir)
  */
 
-#include <assert.h>
+#include "test.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -130,13 +130,13 @@ static void test_init(void)
     struct test_context ctx = {0};
     struct tfsm fsm;
     int_fast8_t ret = tfsm_init(&fsm, &ctx, g_enter, g_event, N_STATES);
-    assert(ret == 0);
-    assert(fsm.current == 0);
-    assert(fsm.next == 0);
-    assert(fsm.context == &ctx);
-    assert(fsm.n_states == N_STATES);
-    assert(fsm.enter_handlers == g_enter);
-    assert(fsm.event_handlers == g_event);
+    test_assert(ret == 0);
+    test_assert(fsm.current == 0);
+    test_assert(fsm.next == 0);
+    test_assert(fsm.context == &ctx);
+    test_assert(fsm.n_states == N_STATES);
+    test_assert(fsm.enter_handlers == g_enter);
+    test_assert(fsm.event_handlers == g_event);
 }
 
 static void test_init_null_enter_handlers(void)
@@ -144,7 +144,7 @@ static void test_init_null_enter_handlers(void)
     struct test_context ctx = {0};
     struct tfsm fsm;
     int_fast8_t ret = tfsm_init(&fsm, &ctx, NULL, g_event, N_STATES);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_init_null_enter_handler(void)
@@ -152,7 +152,7 @@ static void test_init_null_enter_handler(void)
     tfsm_enter_handler *eh[N_STATES] = { NULL, enter_running, enter_done };
     struct tfsm fsm;
     int_fast8_t ret = tfsm_init(&fsm, NULL, eh, g_event, N_STATES);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 /* ── reset tests ────────────────────────────────────────────────────── */
@@ -165,15 +165,15 @@ static void test_reset(void)
     fsm.next = STATE_RUNNING;
 
     int_fast8_t ret = tfsm_reset(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == 0);
-    assert(fsm.next == 0);
+    test_assert(ret == 0);
+    test_assert(fsm.current == 0);
+    test_assert(fsm.next == 0);
 }
 
 static void test_reset_null(void)
 {
     int_fast8_t ret = tfsm_reset(NULL);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 /* ── event tests ────────────────────────────────────────────────────── */
@@ -185,10 +185,10 @@ static void test_event_triggers_transition(void)
 
     struct test_event_data data = { .value = 42 };
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(ret == 1);
-    assert(fsm.next == STATE_RUNNING);
-    assert(ctx.event_count == 1);
-    assert(ctx.last_event == EVENT_START);
+    test_assert(ret == 1);
+    test_assert(fsm.next == STATE_RUNNING);
+    test_assert(ctx.event_count == 1);
+    test_assert(ctx.last_event == EVENT_START);
 }
 
 static void test_event_no_transition(void)
@@ -198,8 +198,8 @@ static void test_event_no_transition(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_FINISH, &data);
-    assert(ret == 0);
-    assert(fsm.next == 0);
+    test_assert(ret == 0);
+    test_assert(fsm.next == 0);
 }
 
 static void test_event_with_null_data(void)
@@ -208,15 +208,15 @@ static void test_event_with_null_data(void)
     struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
 
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, NULL);
-    assert(ret == 1);
-    assert(fsm.next == STATE_RUNNING);
+    test_assert(ret == 1);
+    test_assert(fsm.next == STATE_RUNNING);
 }
 
 static void test_event_null_fsm(void)
 {
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(NULL, EVENT_START, &data);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_event_current_out_of_range(void)
@@ -227,7 +227,7 @@ static void test_event_current_out_of_range(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_event_current_negative(void)
@@ -238,7 +238,7 @@ static void test_event_current_negative(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_event_during_pending_transition(void)
@@ -249,7 +249,7 @@ static void test_event_during_pending_transition(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_event_null_handler_entry(void)
@@ -260,7 +260,7 @@ static void test_event_null_handler_entry(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(!ret);
+    test_assert(!ret);
 }
 
 static void test_event_null_handlers_table(void)
@@ -271,7 +271,7 @@ static void test_event_null_handlers_table(void)
 
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event(&fsm, EVENT_START, &data);
-    assert(!ret);
+    test_assert(!ret);
 }
 
 /* ── step tests ─────────────────────────────────────────────────────── */
@@ -283,20 +283,20 @@ static void test_step(void)
 
     struct test_event_data data = {0};
     tfsm_event(&fsm, EVENT_START, &data);
-    assert(fsm.next == STATE_RUNNING);
+    test_assert(fsm.next == STATE_RUNNING);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == 0);
-    assert(ctx.enter_count == 2);
-    assert(ctx.last_enter_state == STATE_RUNNING);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_RUNNING);
+    test_assert(fsm.next == 0);
+    test_assert(ctx.enter_count == 2);
+    test_assert(ctx.last_enter_state == STATE_RUNNING);
 }
 
 static void test_step_null_fsm(void)
 {
     int_fast8_t ret = tfsm_step(NULL);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_step_no_pending_transition(void)
@@ -305,7 +305,7 @@ static void test_step_no_pending_transition(void)
     struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_step_null_enter_handlers_table(void)
@@ -318,7 +318,7 @@ static void test_step_null_enter_handlers_table(void)
     fsm.enter_handlers = NULL;
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_step_null_enter_handler_entry(void)
@@ -331,7 +331,7 @@ static void test_step_null_enter_handler_entry(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_step_chained_transition(void)
@@ -344,15 +344,15 @@ static void test_step_chained_transition(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret == STATE_DONE);
-    assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == STATE_DONE);
+    test_assert(ret == STATE_DONE);
+    test_assert(fsm.current == STATE_RUNNING);
+    test_assert(fsm.next == STATE_DONE);
 
     ret = tfsm_step(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == STATE_DONE);
-    assert(fsm.next == 0);
-    assert(ctx.enter_count == 2);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_DONE);
+    test_assert(fsm.next == 0);
+    test_assert(ctx.enter_count == 2);
 }
 
 static void test_step_enter_handler_out_of_range(void)
@@ -365,12 +365,12 @@ static void test_step_enter_handler_out_of_range(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_step(&fsm);
-    assert(ret == N_STATES);
-    assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == N_STATES);
+    test_assert(ret == N_STATES);
+    test_assert(fsm.current == STATE_RUNNING);
+    test_assert(fsm.next == N_STATES);
 
     ret = tfsm_step(&fsm);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 /* ── process tests ──────────────────────────────────────────────────── */
@@ -382,13 +382,13 @@ static void test_process(void)
     struct test_event_data data = {0};
 
     tfsm_event(&fsm, EVENT_START, &data);
-    assert(fsm.next == STATE_RUNNING);
+    test_assert(fsm.next == STATE_RUNNING);
 
     int_fast8_t ret = tfsm_process(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == 0);
-    assert(ctx.enter_count == 2);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_RUNNING);
+    test_assert(fsm.next == 0);
+    test_assert(ctx.enter_count == 2);
 }
 
 static void test_process_chained(void)
@@ -401,10 +401,10 @@ static void test_process_chained(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_process(&fsm);
-    assert(ret == 0);
-    assert(fsm.current == STATE_DONE);
-    assert(fsm.next == 0);
-    assert(ctx.enter_count == 2);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_DONE);
+    test_assert(fsm.next == 0);
+    test_assert(ctx.enter_count == 2);
 }
 
 static void test_process_no_pending(void)
@@ -413,7 +413,7 @@ static void test_process_no_pending(void)
     struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
 
     int_fast8_t ret = tfsm_process(&fsm);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_process_step_error(void)
@@ -426,7 +426,7 @@ static void test_process_step_error(void)
     tfsm_event(&fsm, EVENT_START, &data);
 
     int_fast8_t ret = tfsm_process(&fsm);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 /* ── event_process tests ────────────────────────────────────────────── */
@@ -438,11 +438,11 @@ static void test_event_process(void)
     struct test_event_data data = {0};
 
     int_fast8_t ret = tfsm_event_process(&fsm, EVENT_START, &data);
-    assert(ret == 0);
-    assert(fsm.current == STATE_RUNNING);
-    assert(fsm.next == 0);
-    assert(ctx.event_count == 1);
-    assert(ctx.enter_count == 2);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_RUNNING);
+    test_assert(fsm.next == 0);
+    test_assert(ctx.event_count == 1);
+    test_assert(ctx.enter_count == 2);
 }
 
 static void test_event_process_no_transition(void)
@@ -452,9 +452,9 @@ static void test_event_process_no_transition(void)
     struct test_event_data data = {0};
 
     int_fast8_t ret = tfsm_event_process(&fsm, EVENT_FINISH, &data);
-    assert(ret == 0);
-    assert(fsm.current == STATE_IDLE);
-    assert(fsm.next == 0);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_IDLE);
+    test_assert(fsm.next == 0);
 }
 
 static void test_event_process_chained(void)
@@ -465,16 +465,16 @@ static void test_event_process_chained(void)
     struct test_event_data data = {0};
 
     int_fast8_t ret = tfsm_event_process(&fsm, EVENT_START, &data);
-    assert(ret == 0);
-    assert(fsm.current == STATE_DONE);
-    assert(ctx.enter_count == 2);
+    test_assert(ret == 0);
+    test_assert(fsm.current == STATE_DONE);
+    test_assert(ctx.enter_count == 2);
 }
 
 static void test_event_process_event_error(void)
 {
     struct test_event_data data = {0};
     int_fast8_t ret = tfsm_event_process(NULL, EVENT_START, &data);
-    assert(ret < 0);
+    test_assert(ret < 0);
 }
 
 static void test_event_process_full_cycle(void)
@@ -483,14 +483,14 @@ static void test_event_process_full_cycle(void)
     struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
     struct test_event_data data = {0};
 
-    assert(tfsm_event_process(&fsm, EVENT_START, &data) == 0);
-    assert(fsm.current == STATE_RUNNING);
+    test_assert(tfsm_event_process(&fsm, EVENT_START, &data) == 0);
+    test_assert(fsm.current == STATE_RUNNING);
 
-    assert(tfsm_event_process(&fsm, EVENT_FINISH, &data) == 0);
-    assert(fsm.current == STATE_DONE);
+    test_assert(tfsm_event_process(&fsm, EVENT_FINISH, &data) == 0);
+    test_assert(fsm.current == STATE_DONE);
 
-    assert(ctx.enter_count == 3);
-    assert(ctx.event_count == 2);
+    test_assert(ctx.enter_count == 3);
+    test_assert(ctx.event_count == 2);
 }
 
 /* ── full cycle ─────────────────────────────────────────────────────── */
@@ -501,18 +501,18 @@ static void test_full_cycle(void)
     struct tfsm fsm = make_fsm(&ctx, g_enter, g_event);
     struct test_event_data data = {0};
 
-    assert(fsm.current == STATE_IDLE);
+    test_assert(fsm.current == STATE_IDLE);
 
-    assert(tfsm_event(&fsm, EVENT_START, &data) == 1);
-    assert(tfsm_step(&fsm) == 0);
-    assert(fsm.current == STATE_RUNNING);
+    test_assert(tfsm_event(&fsm, EVENT_START, &data) == 1);
+    test_assert(tfsm_step(&fsm) == 0);
+    test_assert(fsm.current == STATE_RUNNING);
 
-    assert(tfsm_event(&fsm, EVENT_FINISH, &data) == STATE_DONE);
-    assert(tfsm_step(&fsm) == 0);
-    assert(fsm.current == STATE_DONE);
+    test_assert(tfsm_event(&fsm, EVENT_FINISH, &data) == STATE_DONE);
+    test_assert(tfsm_step(&fsm) == 0);
+    test_assert(fsm.current == STATE_DONE);
 
-    assert(ctx.enter_count == 3);
-    assert(ctx.event_count == 2);
+    test_assert(ctx.enter_count == 3);
+    test_assert(ctx.event_count == 2);
 }
 
 /* ── main ───────────────────────────────────────────────────────────── */

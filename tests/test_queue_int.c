@@ -3,7 +3,7 @@
  * Run: ctest (from build dir).
  */
 
-#include <assert.h>
+#include "test.h"
 #include <stdint.h>
 #include <threads.h>
 
@@ -47,19 +47,19 @@ static void test_two_threads_producer_consumer(void)
     int res_prod, res_cons;
 
     int status = queue_int_init(&g_q, g_buffer, QUEUE_SIZE, 1);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
-    assert(thrd_create(&prod, producer_thread, NULL) == thrd_success);
-    assert(thrd_create(&cons, consumer_thread, collected) == thrd_success);
+    test_assert(thrd_create(&prod, producer_thread, NULL) == thrd_success);
+    test_assert(thrd_create(&cons, consumer_thread, collected) == thrd_success);
 
-    assert(thrd_join(prod, &res_prod) == thrd_success);
-    assert(thrd_join(cons, &res_cons) == thrd_success);
+    test_assert(thrd_join(prod, &res_prod) == thrd_success);
+    test_assert(thrd_join(cons, &res_cons) == thrd_success);
 
-    assert(res_prod == 0);
-    assert(res_cons == 0);
+    test_assert(res_prod == 0);
+    test_assert(res_cons == 0);
 
     for (int i = 0; i < N_ITEMS; i++)
-        assert(collected[i] == i);
+        test_assert(collected[i] == i);
 
     queue_int_close(&g_q);
 }

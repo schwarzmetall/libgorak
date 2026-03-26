@@ -3,7 +3,7 @@
  * delivered via callback. Run: ctest (from build dir).
  */
 
-#include <assert.h>
+#include "test.h"
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
@@ -27,8 +27,8 @@ static enum fdset_input_callback_action on_data(int fd, void *buf, unsigned nbuf
 {
     (void)fd;
     (void)arg;
-    assert((status == FDSET_INPUT_STATUS_OK) || (status == FDSET_INPUT_STATUS_ZERO_READ));
-    assert(nbuf <= BUF_SIZE);
+    test_assert((status == FDSET_INPUT_STATUS_OK) || (status == FDSET_INPUT_STATUS_ZERO_READ));
+    test_assert(nbuf <= BUF_SIZE);
     mtx_lock(&received_mtx);
     received_len = nbuf;
     memcpy(received_buf, buf, nbuf);
@@ -50,16 +50,16 @@ static void test_pipe_data_gets_through(void)
     received_len = 0;
     received_done = 0;
     memset(received_buf, 0, sizeof received_buf);
-    assert(mtx_init(&received_mtx, mtx_plain) == thrd_success);
-    assert(cnd_init(&received_cnd) == thrd_success);
+    test_assert(mtx_init(&received_mtx, mtx_plain) == thrd_success);
+    test_assert(cnd_init(&received_cnd) == thrd_success);
 
-    assert(pipe(pipefd) == 0);
+    test_assert(pipe(pipefd) == 0);
 
     status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, FDSET_TIMEOUT_MS);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     status = fdset_input_async_add_fd(&fi, pipefd[0], pipe_buf, BUF_SIZE, on_data, NULL);
-    assert(status == 0);
+    test_assert(status == 0);
 
     /* Write a larger payload: repeat message many times to move more data. */
     {
@@ -68,7 +68,7 @@ static void test_pipe_data_gets_through(void)
         size_t len = 0;
         for (int i = 0; i < 50; i++) {
             ssize_t n = write(pipefd[1], msg, one);
-            assert((size_t)n == one);
+            test_assert((size_t)n == one);
             len += one;
         }
         (void)len;
@@ -81,22 +81,22 @@ static void test_pipe_data_gets_through(void)
         timespec_get(&ts, TIME_UTC);
         ts.tv_sec += WAIT_FOR_CALLBACK_SEC;
         int r = cnd_timedwait(&received_cnd, &received_mtx, &ts);
-        assert(r == thrd_success || r == thrd_timedout);
+        test_assert(r == thrd_success || r == thrd_timedout);
         if (r == thrd_timedout)
             break;
     }
     mtx_unlock(&received_mtx);
 
-    assert(received_done);
+    test_assert(received_done);
     /* We may get one or more callbacks; buffer should end with the message (last write). */
-    assert(received_len >= strlen(TEST_MSG) + 1);
-    assert(memcmp(received_buf, TEST_MSG, strlen(TEST_MSG) + 1) == 0);
+    test_assert(received_len >= strlen(TEST_MSG) + 1);
+    test_assert(memcmp(received_buf, TEST_MSG, strlen(TEST_MSG) + 1) == 0);
 
     /* Close fdset first so the thread stops; then close pipe write end (avoid POLLHUP while polling).
      * Give the worker a moment to see POLLHUP before we block in join. */
     thrd_sleep(&(struct timespec){ .tv_sec = 0, .tv_nsec = 50 * 1000 * 1000 }, NULL);
     status = fdset_input_close(&fi, 0);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
     close(pipefd[1]);
 
     cnd_destroy(&received_cnd);
@@ -111,7 +111,7 @@ static enum fdset_input_callback_action on_data_a(int fd, void *buf, unsigned nb
 {
     (void)fd;
     (void)arg;
-    assert(status == FDSET_INPUT_STATUS_OK);
+    test_assert(status == FDSET_INPUT_STATUS_OK);
     memcpy(received_a, buf, nbuf);
     len_a = nbuf;
     done_a = 1;
@@ -122,7 +122,7 @@ static enum fdset_input_callback_action on_data_b(int fd, void *buf, unsigned nb
 {
     (void)fd;
     (void)arg;
-    assert(status == FDSET_INPUT_STATUS_OK);
+    test_assert(status == FDSET_INPUT_STATUS_OK);
     memcpy(received_b, buf, nbuf);
     len_b = nbuf;
     done_b = 1;
@@ -144,21 +144,21 @@ static void test_two_pipes_both_get_data(void)
     memset(received_a, 0, sizeof received_a);
     memset(received_b, 0, sizeof received_b);
 
-    assert(pipe(pipefd_a) == 0);
-    assert(pipe(pipefd_b) == 0);
+    test_assert(pipe(pipefd_a) == 0);
+    test_assert(pipe(pipefd_b) == 0);
 
     status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, FDSET_TIMEOUT_MS);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     status = fdset_input_async_add_fd(&fi, pipefd_a[0], pipe_buf_a, BUF_SIZE, on_data_a, NULL);
-    assert(status == 0);
+    test_assert(status == 0);
     status = fdset_input_async_add_fd(&fi, pipefd_b[0], pipe_buf_b, BUF_SIZE, on_data_b, NULL);
-    assert(status == 0);
+    test_assert(status == 0);
 
     /* More data per pipe: send many chunks. */
     for (int i = 0; i < 100; i++) {
-        assert(write(pipefd_a[1], "A", 2) == 2);
-        assert(write(pipefd_b[1], "B", 2) == 2);
+        test_assert(write(pipefd_a[1], "A", 2) == 2);
+        test_assert(write(pipefd_b[1], "B", 2) == 2);
     }
 
     /* Wait for both callbacks (under load callbacks can be delayed). */
@@ -168,15 +168,15 @@ static void test_two_pipes_both_get_data(void)
             break;
     }
 
-    assert(done_a);
-    assert(done_b);
+    test_assert(done_a);
+    test_assert(done_b);
     /* Each pipe got 100 * 2 bytes; we only check we got data and it looks right. */
-    assert(len_a >= 2 && received_a[0] == 'A');
-    assert(len_b >= 2 && received_b[0] == 'B');
+    test_assert(len_a >= 2 && received_a[0] == 'A');
+    test_assert(len_b >= 2 && received_b[0] == 'B');
 
     thrd_sleep(&(struct timespec){ .tv_sec = 0, .tv_nsec = 50 * 1000 * 1000 }, NULL);
     status = fdset_input_close(&fi, 0);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
     close(pipefd_a[1]);
     close(pipefd_b[1]);
 }
@@ -196,9 +196,9 @@ static enum fdset_input_callback_action on_data_idx(int fd, void *buf, unsigned 
 {
     (void)fd;
     int idx = (int)(intptr_t)arg;
-    assert(status == FDSET_INPUT_STATUS_OK);
-    assert(idx >= 0 && idx < N_PIPES);
-    assert(nbuf <= PIPE_READ_BUF_SIZE);
+    test_assert(status == FDSET_INPUT_STATUS_OK);
+    test_assert(idx >= 0 && idx < N_PIPES);
+    test_assert(nbuf <= PIPE_READ_BUF_SIZE);
     mtx_lock(&recv_mtx);
     /* Overwrite: we only need the latest chunk (fdset_input gives us full buffer each time). */
     recv_lens[idx] = nbuf;
@@ -221,19 +221,19 @@ static void test_four_pipes_more_data(void)
     memset(recv_done, 0, sizeof recv_done);
     memset(recv_lens, 0, sizeof recv_lens);
     memset(recv_bufs, 0, sizeof recv_bufs);
-    assert(mtx_init(&recv_mtx, mtx_plain) == thrd_success);
-    assert(cnd_init(&recv_cnd) == thrd_success);
+    test_assert(mtx_init(&recv_mtx, mtx_plain) == thrd_success);
+    test_assert(cnd_init(&recv_cnd) == thrd_success);
 
     for (int i = 0; i < N_PIPES; i++)
-        assert(pipe(pipefds[i]) == 0);
+        test_assert(pipe(pipefds[i]) == 0);
 
     status = fdset_input_init(&fi, fd_info_buffer, pollfd_buffer, NMAX, FDSET_TIMEOUT_MS);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
 
     for (int i = 0; i < N_PIPES; i++) {
         status = fdset_input_async_add_fd(&fi, pipefds[i][0], pipe_bufs[i], PIPE_READ_BUF_SIZE,
                                           on_data_idx, (void *)(intptr_t)i);
-        assert(status == 0);
+        test_assert(status == 0);
     }
 
     /* All pipes: many writes each; last message to pipe i is "i-(N_ROUNDS-1)\0". */
@@ -241,9 +241,9 @@ static void test_four_pipes_more_data(void)
         for (int i = 0; i < N_PIPES; i++) {
             char msg[16];
             int n = (int)snprintf(msg, sizeof msg, "%d-%d", i, r);
-            assert(n > 0 && (size_t)n < sizeof msg);
+            test_assert(n > 0 && (size_t)n < sizeof msg);
             ssize_t w = write(pipefds[i][1], msg, (size_t)n + 1);
-            assert((size_t)w == (size_t)n + 1);
+            test_assert((size_t)w == (size_t)n + 1);
         }
     }
 
@@ -253,7 +253,7 @@ static void test_four_pipes_more_data(void)
         size_t expected_len[N_PIPES];
         for (int i = 0; i < N_PIPES; i++) {
             int n = (int)snprintf(expected_buf[i], sizeof expected_buf[i], "%d-%d", i, N_ROUNDS - 1);
-            assert(n > 0);
+            test_assert(n > 0);
             expected_len[i] = (size_t)n;
         }
         mtx_lock(&recv_mtx);
@@ -278,17 +278,17 @@ static void test_four_pipes_more_data(void)
     for (int i = 0; i < N_PIPES; i++) {
         char expected[24];
         int n = (int)snprintf(expected, sizeof expected, "%d-%d", i, N_ROUNDS - 1);
-        assert(n > 0);
+        test_assert(n > 0);
         size_t len = (size_t)n;
         int found = 0;
         for (size_t j = 0; j + len <= recv_lens[i]; j++)
             if (memcmp(recv_bufs[i] + j, expected, len) == 0) { found = 1; break; }
-        assert(found && "received data does not contain last message written to this pipe");
+        test_assert(found && "received data does not contain last message written to this pipe");
     }
 
     thrd_sleep(&(struct timespec){ .tv_sec = 0, .tv_nsec = 50 * 1000 * 1000 }, NULL);
     status = fdset_input_close(&fi, 0);
-    assert(status == thrd_success);
+    test_assert(status == thrd_success);
     for (int i = 0; i < N_PIPES; i++)
         close(pipefds[i][1]);
 
