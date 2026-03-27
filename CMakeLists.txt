@@ -80,9 +80,7 @@ target_sources(libgorak PRIVATE
 # remove "lib" prefix since it's already part of the project name
 set_target_properties(libgorak PROPERTIES PREFIX "")
 
-# Tests (optional, enabled by default); use ctest to run
-option(BUILD_TESTING "Build and enable tests (ctest)" ON)
+include(CTest)
 if(BUILD_TESTING)
-    enable_testing()
     add_subdirectory(tests)
 endif()
