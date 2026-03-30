@@ -26,6 +26,7 @@ else()
 endif()
 
 add_library(libgorak)
+target_compile_definitions(libgorak PRIVATE _POSIX_C_SOURCE=200809L)
 
 target_sources(libgorak PUBLIC
   FILE_SET headers TYPE HEADERS
