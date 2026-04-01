@@ -1,11 +1,11 @@
-#include <lgk/tnt.h>
+#include <tnt_strip_path.h>
 
 static unsigned is_path_separator(char c)
 {
-    #ifdef BUILD_HOST_WIN32
+#ifdef BUILD_HOST_WIN32
     if(c == ':') return 1;
     if(c == '\\') return 1;
-    #endif
+#endif
     if(c == '/') return 1;
     return 0;
 }

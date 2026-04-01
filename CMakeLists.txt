@@ -29,54 +29,62 @@ add_library(libgorak)
 target_compile_definitions(libgorak PRIVATE _POSIX_C_SOURCE=200809L)
 
 target_sources(libgorak PUBLIC
-  FILE_SET headers TYPE HEADERS
-  BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
-  FILES
-    include/lgk/array.h
-    include/lgk/bitmap.h
-    include/lgk/char.h
-    include/lgk/date.h
-    include/lgk/fd.h
-    include/lgk/fdset_input.h
-    include/lgk/fsm.h
-    include/lgk/queue.h
-    include/lgk/queue_int.h
-    include/lgk/queue_ptr.h
-    include/lgk/queue_uint.h
-    include/lgk/threadpool.h
-    include/lgk/threads.h
-    include/lgk/timespec.h
-    include/lgk/tnt.h
-    include/lgk/util.h
-)
+    FILE_SET public_headers TYPE HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+    FILES
+        include/lgk/array.h
+        include/lgk/bitmap.h
+        include/lgk/char.h
+        include/lgk/date.h
+        include/lgk/fd.h
+        include/lgk/fdset_input.h
+        include/lgk/fsm.h
+        include/lgk/queue.h
+        include/lgk/queue_int.h
+        include/lgk/queue_ptr.h
+        include/lgk/queue_uint.h
+        include/lgk/threadpool.h
+        include/lgk/threads.h
+        include/lgk/timespec.h
+        include/lgk/tnt.h
+        include/lgk/util.h)
 
 target_sources(libgorak PRIVATE
-  src/array_fill_int.c
-  src/array_find_int.c
-  src/bitmap.c
-  src/char.c
-  src/cnd_timedwait_ms.c
-  src/cnd_timedwait_ts.c
-  src/date_misc.c
-  src/fd_read_loop.c
-  src/fd_read_timed.c
-  src/fd_write_loop.c
-  src/fd_write_timed.c
-  src/fdset_input.c
-  src/monitor.c
-  src/mtx_timedlock_ms.c
-  src/mtx_timedlock_ts.c
-  src/queue_int.c
-  src/queue_ptr.c
-  src/queue_uint.c
-  src/thrdstrerror.c
-  src/thread.c
-  src/threadpool.c
-  src/timespec_ms.c
-  src/tnt.c
-  src/trace_print_default.c
-  src/trace_print_default_nolevel.c
-)
+    FILE_SET private_headers TYPE HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+    FILES
+        src/tnt_strip_path.h)
+
+target_sources(libgorak PRIVATE
+    src/array_fill_int.c
+    src/array_find_int.c
+    src/bitmap.c
+    src/char.c
+    src/cnd_timedwait_ms.c
+    src/cnd_timedwait_ts.c
+    src/date_misc.c
+    src/fd_read_loop.c
+    src/fd_read_timed.c
+    src/fd_write_loop.c
+    src/fd_write_timed.c
+    src/fdset_input.c
+    src/monitor.c
+    src/mtx_timedlock_ms.c
+    src/mtx_timedlock_ts.c
+    src/queue_int.c
+    src/queue_ptr.c
+    src/queue_uint.c
+    src/thrdstrerror.c
+    src/thread.c
+    src/threadpool.c
+    src/timespec_ms.c
+    src/tnt_output_level_dynamic.c
+    src/tnt_strip_path.c
+    src/tnt_print_stderr.c
+    src/tnt_print_stderr_nosource.c
+    src/tnt_print_syslog_common.c
+    src/tnt_print_syslog.c
+    src/tnt_print_syslog_nosource.c)
 
 # remove "lib" prefix since it's already part of the project name
 set_target_properties(libgorak PROPERTIES PREFIX "")
