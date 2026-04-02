@@ -31,7 +31,7 @@
     type_state name##_event(struct name *fsm, type_event event, type_event_data event_data);\
     type_state name##_step(struct name *fsm);\
     type_state name##_process(struct name *fsm);\
-    int_least8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data);\
+    int_fast8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data);\
     type_state name##_reset(struct name *fsm);\
     type_state name##_init(struct name *fsm, type_context context, name##_enter_handler *const *enter_handlers, name##_event_handler *const *event_handlers, type_state n_states);
 
@@ -81,7 +81,7 @@
     }
 
 #define FSM_FUNCTION_EVENT_PROCESS(name, type_state, type_event, type_event_data)\
-    int_least8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data)\
+    int_fast8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data)\
     {\
         type_state next = name##_event(fsm, event, event_data);\
         TRAPF(next<0, name##_event, "%i", (int)next);\
