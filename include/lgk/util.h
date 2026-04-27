@@ -24,4 +24,6 @@
 
 #define ASSERT_SIGNED(type) static_assert(((type)-1)<0)
 
+unsigned digits(unsigned value, unsigned base);
+
 #endif

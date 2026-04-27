@@ -63,6 +63,7 @@ target_sources(libgorak PRIVATE
     src/cnd_timedwait_ms.c
     src/cnd_timedwait_ts.c
     src/date_misc.c
+    src/digits.c
     src/fd_read_loop.c
     src/fd_read_timed.c
     src/fd_write_loop.c
