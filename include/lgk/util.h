@@ -16,6 +16,7 @@
 #endif
 
 #define ASIZE(a) (sizeof(a)/sizeof(a[0]))
+#define LASTINDEX(a) (ASIZE(a)-1)
 
 #define BITEXTRACT(value, basename) (((value) & basename##_MASK) >> basename##_SHIFT)
 #define BITSIZE(x) (sizeof(x)<<3)
