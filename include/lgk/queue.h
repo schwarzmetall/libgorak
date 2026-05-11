@@ -55,7 +55,7 @@
         return thrd_error;\
     }\
     \
-    sclass int queue_##name##_init_prefilled(struct queue_##name *q, type_data *buffer, type_size size, type_size used, int_fast8_t timed)\
+    [[maybe_unused]] sclass int queue_##name##_init_prefilled(struct queue_##name *q, type_data *buffer, type_size size, type_size used, int_fast8_t timed)\
     {\
         TRAPNULL(q);\
         TRAP(used>size, used, "used > size");\
