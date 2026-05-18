@@ -116,7 +116,7 @@
         }\
         else\
         {\
-            CRITF(cnd_timedwait_ts, "%s", lgk_thrdstrerror(status));\
+            if(status != thrd_timedout) CRITF(cnd_timedwait_ts, "%s", lgk_thrdstrerror(status));\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
         if(status_unlock != thrd_success) CRITF(mtx_unlock, "%s", lgk_thrdstrerror(status_unlock));\
@@ -161,7 +161,7 @@
         }\
         else\
         {\
-            CRITF(cnd_timedwait_ts, "%s", lgk_thrdstrerror(status));\
+            if(status != thrd_timedout) CRITF(cnd_timedwait_ts, "%s", lgk_thrdstrerror(status));\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
         if(status_unlock != thrd_success) CRITF(mtx_unlock, "%s", lgk_thrdstrerror(status));\
