@@ -10,7 +10,7 @@ unsigned digits(unsigned value, unsigned base)
     return (unsigned)(log(value) / log(base)) + 1;
 #else
     unsigned n=0;
-    for(n=1; value; n++) value /= base;
+    for(n=0; value; n++) value /= base;
     return n;
 #endif
 }
