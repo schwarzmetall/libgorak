@@ -114,7 +114,7 @@ static int fdset_input_thread(void *data)
         status = mtx_unlock(&fi->mutex);
         TRAPF(status!=thrd_success, mtx_unlock, "%i", status);
     }
-    TRAPVEQ(fi->close, 0, close_eq_zero);
+    TRAPXXEQ(fi->close, 0, close, zero, "%i");
     if(close(fi->pipefd_read)) CRITFE(close);
     return thrd_success;
 trap_close_eq_zero:
@@ -129,9 +129,9 @@ trap_read_pipe_wait:
 
 int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info_buffer, struct pollfd *pollfd_buffer, unsigned nmax, int timeout_ms)
 {
-    TRAPNULL(fi);
-    TRAPNULL(fd_info_buffer);
-    TRAPNULL(pollfd_buffer);
+    TRAPVNULL(fi);
+    TRAPVNULL(fd_info_buffer);
+    TRAPVNULL(pollfd_buffer);
     TRAP(!nmax, nmax, "nmax==%i", nmax);
     fi->fd_info_buffer = fd_info_buffer;
     fi->pollfd_buffer = pollfd_buffer;
@@ -167,7 +167,7 @@ trap_fi_null:
 
 int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach)
 {
-    TRAPNULL(fi);
+    TRAPVNULL(fi);
     fi->close = -1;
     int status = close(fi->pipefd_write) ? thrd_error : thrd_success;
     if(status!=thrd_success) CRITFE(close);

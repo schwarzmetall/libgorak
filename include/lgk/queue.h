@@ -30,8 +30,8 @@
 #define QUEUE_INIT(type_data, type_size, name)\
     QUEUE_INIT_HEADER(type_data, type_size, name)\
     {\
-        TRAPNULL(q);\
-        TRAPNULL(buffer);\
+        TRAPVNULL(q);\
+        TRAPVNULL(buffer);\
         q->buffer = buffer;\
         q->size = size;\
         q->used = q->i_read = q->i_write = 0;\
@@ -56,7 +56,7 @@
 #define QUEUE_INIT_PREFILLED(type_data, type_size, name)\
     QUEUE_INIT_PREFILLED_HEADER(type_data, type_size, name)\
     {\
-        TRAPNULL(q);\
+        TRAPVNULL(q);\
         TRAP(used>size, used, "used > size");\
         int status = name##_init(q, buffer, size, timed);\
         TRAPF(status!=thrd_success, name##_init, "%s", lgk_thrdstrerror(status));\
@@ -73,7 +73,7 @@
 #define QUEUE_CLOSE(type_data, type_size, name)\
     QUEUE_CLOSE_HEADER(type_data, type_size, name)\
     {\
-        TRAPNULL(q);\
+        TRAPVNULL(q);\
         if(q->i_read != q->i_write) WARN("queue not empty");\
         cnd_destroy(&q->cnd_writable);\
         cnd_destroy(&q->cnd_readable);\
@@ -86,14 +86,14 @@
 #define QUEUE_PUSH(type_data, type_size, name)\
     QUEUE_PUSH_HEADER(type_data, type_size, name)\
     {\
-        TRAPNULL(q);\
+        TRAPVNULL(q);\
         int status = thrd_error;\
         struct timespec ts;\
         struct timespec *ts_ptr = NULL;\
         if(timeout_ms >= 0)\
         {\
             status = timespec_get_offset_ms((ts_ptr=&ts), TIME_UTC, timeout_ms);\
-            TRAPF(status!=TIME_UTC, timespec_get_offset_ms, "%i", status);\
+            TRAPF(status, timespec_get_offset_ms, "%i", status);\
         }\
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
@@ -130,15 +130,15 @@
 #define QUEUE_POP(type_data, type_size, name)\
     QUEUE_POP_HEADER(type_data, type_size, name)\
     {\
-        TRAPNULL(q);\
-        TRAPNULL(item);\
+        TRAPVNULL(q);\
+        TRAPVNULL(item);\
         int status = thrd_error;\
         struct timespec ts;\
         struct timespec *ts_ptr = NULL;\
         if(timeout_ms >= 0)\
         {\
             status = timespec_get_offset_ms((ts_ptr=&ts), TIME_UTC, timeout_ms);\
-            TRAPF(status!=TIME_UTC, timespec_get_offset_ms, "%i", status);\
+            TRAPF(status, timespec_get_offset_ms, "%i", status);\
         }\
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\

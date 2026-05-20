@@ -79,7 +79,7 @@ static void test_trapnull(void)
 {
     int *p = NULL;
     int jumped = 0;
-    TRAPNULL(p);
+    TRAPVNULL(p);
     test_assert(0 && "TRAPNULL should jump on NULL");
     TRAP_LABEL(p_null):
     jumped = 1;
@@ -90,7 +90,7 @@ static void test_trapnull_nonnull(void)
 {
     int val = 42;
     int *q = &val;
-    TRAPNULL(q);
+    TRAPVNULL(q);
     test_assert(*q == 42);
     return;
     TRAP_LABEL(q_null):

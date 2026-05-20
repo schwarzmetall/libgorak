@@ -57,7 +57,7 @@ static void test_timespec_get_offset_ms_success(void)
 {
     struct timespec ts = { 0, 0 };
     int status = timespec_get_offset_ms(&ts, TIME_UTC, 0);
-    test_assert(status == TIME_UTC);
+    test_assert(!status);
     test_assert(ts.tv_nsec >= 0 && ts.tv_nsec < NSEC_PER_SEC);
 }
 
@@ -68,7 +68,7 @@ static void test_timespec_get_offset_ms_applies_offset(void)
 
     struct timespec ts_after = { 0, 0 };
     int status = timespec_get_offset_ms(&ts_after, TIME_UTC, 2000);
-    test_assert(status == TIME_UTC);
+    test_assert(!status);
     test_assert(ts_after.tv_sec >= ts_before.tv_sec);
     test_assert(ts_after.tv_nsec >= 0 && ts_after.tv_nsec < NSEC_PER_SEC);
     /* ts_after should be roughly ts_before + 2 s (allow 1 s tolerance) */

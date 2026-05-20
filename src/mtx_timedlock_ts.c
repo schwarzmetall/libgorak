@@ -4,7 +4,7 @@
 
 int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *ts)
 {
-    TRAPNULL(mutex);
+    TRAPVNULL(mutex);
     int status = thrd_error;
     if(ts)
     {

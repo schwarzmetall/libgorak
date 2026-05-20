@@ -9,8 +9,8 @@
 // setval: 0 -> set all to zero; >0 -> set all to 1; <0 -> don't touch
 int_fast8_t lgk_bitmap_init(struct lgk_bitmap *bitmap, lgk_bitmap_t *map, unsigned size, int_fast8_t setval)
 {
-    TRAPNULL(bitmap);
-    if(size) TRAPNULL(map);
+    TRAPVNULL(bitmap);
+    if(size) TRAPVNULL(map);
     bitmap->map = map;
     bitmap->size = size;
     if(setval<0) return 0;
@@ -24,33 +24,29 @@ trap_bitmap_null:
 
 int_fast8_t lgk_bitmap_get(const struct lgk_bitmap *bitmap, unsigned i)
 {
-    TRAPNULL(bitmap);
-    TRAPNULL_L(bitmap->map, size);
-    TRAPVEQ(bitmap->size, 0, size_zero);
-    TRAP(i >= bitmap->size, bounds, "index %u >= size %u", i, bitmap->size);
+    TRAPVNULL(bitmap);
+    TRAPXNULL(bitmap->map, map);
+    TRAPVXGTE(i, bitmap->size, size, "%i");
     unsigned i_word = i / BITSIZE(bitmap->map[0]);
     lgk_bitmap_t mask = 1 << (i % BITSIZE(bitmap->map[0]));
     return ((bitmap->map[i_word] & mask) != 0);
-trap_bounds:
-trap_size_zero:
-trap_size_null:
+trap_i_gte_size:
+trap_map_null:
 trap_bitmap_null:
     return -1;
 }
 
 int_fast8_t lgk_bitmap_set(struct lgk_bitmap *bitmap, unsigned i, int_fast8_t setval)
 {
-    TRAPNULL(bitmap);
-    TRAPNULL_L(bitmap->map, size);
-    TRAPVEQ(bitmap->size, 0, size_zero);
-    TRAP(i >= bitmap->size, bounds, "index %u >= size %u", i, bitmap->size);
+    TRAPVNULL(bitmap);
+    TRAPXNULL(bitmap->map, map);
+    TRAPVXGTE(i, bitmap->size, size, "%i");
     unsigned i_word = i / BITSIZE(bitmap->map[0]);
     lgk_bitmap_t mask = 1 << (i % BITSIZE(bitmap->map[0]));
     bitmap->map[i_word] = setval ? (bitmap->map[i_word] | mask) : ( bitmap->map[i_word] & ~mask);
     return (setval != 0);
-trap_bounds:
-trap_size_zero:
-trap_size_null:
+trap_i_gte_size:
+trap_map_null:
 trap_bitmap_null:
     return -1;
 }

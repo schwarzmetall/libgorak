@@ -30,6 +30,7 @@ trap_queue_int_pop:
 
 static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_threads, int join_timeout_ms, int_fast8_t timeout_detach)
 {
+    TRAPVNULL(tp);
     int status = thrd_success;
     for(unsigned i = 0; i < n_threads; i++)
     {
@@ -56,12 +57,14 @@ static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_
         }
     }
     return status;
+trap_tp_null:
+    return thrd_error;
 }
 
 int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned pool_size, int_fast8_t timed_join, int queue_timeout_ms)
 {
-    TRAPNULL(tp);
-    TRAPNULL(buffer_info);
+    TRAPVNULL(tp);
+    TRAPVNULL(buffer_info);
     unsigned queue_size = pool_size - n_threads;
     if(pool_size <= n_threads)
     {
@@ -104,7 +107,7 @@ trap_tp_null:
 
 int threadpool_close(struct threadpool *tp, int join_timeout_ms, int_fast8_t timeout_detach)
 {
-    TRAPNULL(tp);
+    TRAPVNULL(tp);
     int status = threadpool_signal_and_join_workers(tp, tp->n_threads, join_timeout_ms, timeout_detach);
     int status_cleanup = lgk_monitor_destroy(&tp->monitor);
     if(status_cleanup != thrd_success) CRITF(lgk_monitor_destroy, "%i", status_cleanup);
@@ -127,7 +130,7 @@ trap_tp_null:
 
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data)
 {
-    TRAPNULL(tp);
+    TRAPVNULL(tp);
     int i_work = -1;
     int status = queue_int_pop(&tp->work_pool, &i_work, tp->queue_timeout_ms);
     TRAPF(status!=thrd_success, queue_int_pop, "%i", status);

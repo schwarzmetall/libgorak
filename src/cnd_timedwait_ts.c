@@ -4,8 +4,8 @@
 
 int cnd_timedwait_ts(cnd_t *cond, mtx_t *mutex, const struct timespec *ts)
 {
-    TRAPNULL(cond);
-    TRAPNULL(mutex);
+    TRAPVNULL(cond);
+    TRAPVNULL(mutex);
     int status = thrd_error;
     if(ts)
     {
