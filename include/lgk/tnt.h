@@ -95,15 +95,15 @@ extern enum trace_level lgk_tnt_output_level_dynamic;
     #define DEBUGV(value, fmt) DEBUG(#value"==" fmt, value)
 #endif
 
-#define TRAPXNULL(expr, label) TRAP(!expr, label##_null, #expr"==NULL")
+#define TRAPXNULL(expr, label) TRAP(!(expr), label##_null, #expr" == NULL")
 #define TRAPVNULL(var) TRAPXNULL(var, var)
 
-#define TRAPXXEQ(a, b, labela, labelb, fmt) TRAP(a==b, labela##_eq_##labelb, #a"=="#b"=="fmt, a)
-#define TRAPXXNEQ(a, b, labela, labelb, fmt) TRAP(a!=b, labela##_neq_##labelb, #a"!="#b" "#a"=="fmt #b"=="fmt, a, b)
-#define TRAPXXGT(a, b, labela, labelb, fmt) TRAP(a>b, labela##_gt_##labelb, #a">"#b" "#a"=="fmt #b"=="fmt, a, b)
-#define TRAPXXLT(a, b, labela, labelb, fmt) TRAP(a<b, labela##_lt_##labelb, #a"<"#b" "#a"=="fmt #b"=="fmt, a, b)
-#define TRAPXXGTE(a, b, labela, labelb, fmt) TRAP(a>=b, labela##_gte_##labelb, #a">="#b" "#a"=="fmt #b"=="fmt, a, b)
-#define TRAPXXLTE(a, b, labela, labelb, fmt) TRAP(a<=b, labela##_lte_##labelb, #a"<="#b" "#a"=="fmt #b"=="fmt, a, b)
+#define TRAPXXEQ(a, b, labela, labelb, fmt) TRAP((a)==(b), labela##_eq_##labelb, "("#a")==("#b")=="fmt, (a))
+#define TRAPXXNEQ(a, b, labela, labelb, fmt) TRAP((a)!=(b), labela##_neq_##labelb, "("#a")=="fmt" != ("#b")=="fmt, (a), (b))
+#define TRAPXXGT(a, b, labela, labelb, fmt) TRAP((a)>(b), labela##_gt_##labelb, "("#a")=="fmt" > ("#b")=="fmt, (a), (b))
+#define TRAPXXLT(a, b, labela, labelb, fmt) TRAP((a)<(b), labela##_lt_##labelb, "("#a")=="fmt" < ("#b")=="fmt, (a), (b))
+#define TRAPXXGTE(a, b, labela, labelb, fmt) TRAP((a)>=(b), labela##_gte_##labelb, "("#a")=="fmt" >= ("#b")=="fmt, (a), (b))
+#define TRAPXXLTE(a, b, labela, labelb, fmt) TRAP((a)<=(b), labela##_lte_##labelb, "("#a")=="fmt" <= ("#b")=="fmt, (a), (b))
 #define TRAPVXEQ(var, expr, labelx, fmt) TRAPXXEQ(var, expr, var, labelx, fmt)
 #define TRAPVXNEQ(var, expr, labelx, fmt) TRAPXXNEQ(var, expr, var, labelx, fmt)
 #define TRAPVXGT(var, expr, labelx, fmt) TRAPXXGT(var, expr, var, labelx, fmt)
@@ -117,13 +117,13 @@ extern enum trace_level lgk_tnt_output_level_dynamic;
 #define TRAPVVGTE(a, b, fmt) TRAPVXGTE(a, b, b, fmt)
 #define TRAPVVLTE(a, b, fmt) TRAPVXLTE(a, b, b, fmt)
 
-#define TRAPXXXOOR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)<(xmin))||((x)>(xmax)), labelx##_oor_##labelmin##_##labelmax, #x"=="fmt" out of range ["fmt","fmt"]", (x), (xmin), (xmax))
+#define TRAPXXXOOR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)<(xmin))||((x)>(xmax)), labelx##_oor_##labelmin##_##labelmax, "("#x")=="fmt" out of range ["fmt","fmt"]", (x), (xmin), (xmax))
 #define TRAPVXXOOR(v, xmin, xmax, labelmin, labelmax, fmt) TRAPXXXOOR(v, xmin, xmax, v, labelmin, labelmax, fmt)
 #define TRAPVVXOOR(v, vmin, xmax, labelmax, fmt) TRAPVXXOOR(v, vmin, xmax, vmin, labelmax, fmt)
 #define TRAPVXVOOR(v, xmin, vmax, labelmin, fmt) TRAPVXXOOR(v, xmin, vmax, labelmin, vmax, fmt)
 #define TRAPVVVOOR(v, vmin, vmax, fmt) TRAPVXXOOR(v, vmin, vmax, vmin, vmax, fmt)\
 
-#define TRAPXXXINR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)>=(xmin))&&((x)<=(xmax)), labelx##_inr_##labelmin##_##labelmax, #x"=="fmt" in range ["fmt","fmt"]", (x), (xmin), (xmax))
+#define TRAPXXXINR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)>=(xmin))&&((x)<=(xmax)), labelx##_inr_##labelmin##_##labelmax, "("#x")=="fmt" in range ["fmt","fmt"]", (x), (xmin), (xmax))
 #define TRAPVXXINR(v, xmin, xmax, labelmin, labelmax, fmt) TRAPXXXINR(v, xmin, xmax, v, labelmin, labelmax, fmt)
 #define TRAPVVXINR(v, vmin, xmax, labelmax, fmt) TRAPVXXINR(v, vmin, xmax, vmin, labelmax, fmt)
 #define TRAPVXVINR(v, xmin, vmax, labelmin, fmt) TRAPVXXINR(v, xmin, vmax, labelmin, vmax, fmt)
