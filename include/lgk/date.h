@@ -8,5 +8,6 @@ uint_fast8_t days_in_month(uint_fast16_t year, uint_fast8_t month);
 uint_fast16_t days_in_year(uint_fast16_t year);
 uint_fast16_t days_before_month(uint_fast16_t year, uint_fast8_t month);
 int_fast8_t date_valid(uint_fast16_t year, uint_fast8_t month, uint_fast8_t day);
+int_fast8_t date_valid_human(uint_fast16_t year, uint_fast8_t month, uint_fast8_t day);
 
 #endif
