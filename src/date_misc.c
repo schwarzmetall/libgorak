@@ -41,18 +41,18 @@ uint_fast16_t days_before_month(uint_fast16_t year, uint_fast8_t month)
     };
     if(!month) return 0;
     if(month > 11) return 0;
-    return days_before_month_nonleap[month-1] + leap_year(year);
+    return days_before_month_nonleap[month-1] + ((month >= 2) ? leap_year(year) : 0);
 }
 
 int_fast8_t date_valid(uint_fast16_t year, uint_fast8_t month, uint_fast8_t day)
 {
     if(!year) return 0;
-    if((!month) || (month>11)) return 0;
-    if(!day) return 0;
+    if(month > 11) return 0;
     return (day < days_in_month(year, month));
 }
 
 int_fast8_t date_valid_human(uint_fast16_t year, uint_fast8_t month, uint_fast8_t day)
 {
+    if(!month || !day) return 0;
     return date_valid(year, month-1, day-1);
 }
