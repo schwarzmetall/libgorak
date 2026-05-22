@@ -66,8 +66,8 @@ extern enum trace_level lgk_tnt_output_level_dynamic;
 
 #define TRACEP(level, print, ...) ((level<=LGK_TNT_OUTPUT_LEVEL_INTERNAL) ? print(__FILE__, __LINE__, __func__, level, __VA_ARGS__) : (void)0)
 #define TRACE(level, ...) TRACEP(level, LGK_TNT_PRINT_DEFAULT, __VA_ARGS__)
-#define TRACEF(level, func, fmt, ...) TRACE(level, #func"(): " fmt, __VA_ARGS__)
-#define TRACEFE(level, func) TRACEF(level, func, "%s", LGK_TNT_STRERROR(errno))
+#define TRACEF(level, func, value, fmt) TRACE(level, #func"()==%" fmt, (value))
+#define TRACEFE(level, func) TRACE(level, #func"()==%s", LGK_TNT_STRERROR(errno))
 #define TRAPLP(cond, label, level, print, ...)\
     {\
         if(cond)\
@@ -88,22 +88,22 @@ extern enum trace_level lgk_tnt_output_level_dynamic;
     #define NOTICE(...) TRACE(TRACE_LEVEL_NOTICE, __VA_ARGS__)
     #define INFO(...) TRACE(TRACE_LEVEL_INFO, __VA_ARGS__)
     #define DEBUG(...) TRACE(TRACE_LEVEL_DEBUG, __VA_ARGS__)
-    #define CRITF(func, fmt, ...) CRIT(#func"(): " fmt, __VA_ARGS__)
-    #define ERRF(func, fmt, ...) ERR(#func"(): " fmt, __VA_ARGS__)
-    #define CRITFE(func) CRITF(func, "%s", LGK_TNT_STRERROR(errno))
-    #define ERRFE(func) ERRF(func, "%s", LGK_TNT_STRERROR(errno))
-    #define DEBUGV(value, fmt) DEBUG(#value"==" fmt, value)
+    #define CRITF(func, value, fmt) CRIT(#func"()==%" fmt, (value))
+    #define ERRF(func, value, fmt) ERR(#func"()==%" fmt, (value))
+    #define CRITFE(func) CRIT(#func"()==%s", LGK_TNT_STRERROR(errno))
+    #define ERRFE(func) ERR(#func"()==%s", LGK_TNT_STRERROR(errno))
+    #define DEBUGV(value, fmt) DEBUG(#value"==%" fmt, value)
 #endif
 
 #define TRAPXNULL(expr, label) TRAP(!(expr), label##_null, #expr" == NULL")
 #define TRAPVNULL(var) TRAPXNULL(var, var)
 
-#define TRAPXXEQ(a, b, labela, labelb, fmt) TRAP((a)==(b), labela##_eq_##labelb, "("#a")==("#b")=="fmt, (a))
-#define TRAPXXNEQ(a, b, labela, labelb, fmt) TRAP((a)!=(b), labela##_neq_##labelb, "("#a")=="fmt" != ("#b")=="fmt, (a), (b))
-#define TRAPXXGT(a, b, labela, labelb, fmt) TRAP((a)>(b), labela##_gt_##labelb, "("#a")=="fmt" > ("#b")=="fmt, (a), (b))
-#define TRAPXXLT(a, b, labela, labelb, fmt) TRAP((a)<(b), labela##_lt_##labelb, "("#a")=="fmt" < ("#b")=="fmt, (a), (b))
-#define TRAPXXGTE(a, b, labela, labelb, fmt) TRAP((a)>=(b), labela##_gte_##labelb, "("#a")=="fmt" >= ("#b")=="fmt, (a), (b))
-#define TRAPXXLTE(a, b, labela, labelb, fmt) TRAP((a)<=(b), labela##_lte_##labelb, "("#a")=="fmt" <= ("#b")=="fmt, (a), (b))
+#define TRAPXXEQ(a, b, labela, labelb, fmt) TRAP((a)==(b), labela##_eq_##labelb, "("#a")==("#b")==%"fmt, (a))
+#define TRAPXXNEQ(a, b, labela, labelb, fmt) TRAP((a)!=(b), labela##_neq_##labelb, "("#a")==%"fmt" != ("#b")==%"fmt, (a), (b))
+#define TRAPXXGT(a, b, labela, labelb, fmt) TRAP((a)>(b), labela##_gt_##labelb, "("#a")==%"fmt" > ("#b")==%"fmt, (a), (b))
+#define TRAPXXLT(a, b, labela, labelb, fmt) TRAP((a)<(b), labela##_lt_##labelb, "("#a")==%"fmt" < ("#b")==%"fmt, (a), (b))
+#define TRAPXXGTE(a, b, labela, labelb, fmt) TRAP((a)>=(b), labela##_gte_##labelb, "("#a")==%"fmt" >= ("#b")==%"fmt, (a), (b))
+#define TRAPXXLTE(a, b, labela, labelb, fmt) TRAP((a)<=(b), labela##_lte_##labelb, "("#a")==%"fmt" <= ("#b")==%"fmt, (a), (b))
 #define TRAPVXEQ(var, expr, labelx, fmt) TRAPXXEQ(var, expr, var, labelx, fmt)
 #define TRAPVXNEQ(var, expr, labelx, fmt) TRAPXXNEQ(var, expr, var, labelx, fmt)
 #define TRAPVXGT(var, expr, labelx, fmt) TRAPXXGT(var, expr, var, labelx, fmt)
@@ -117,22 +117,22 @@ extern enum trace_level lgk_tnt_output_level_dynamic;
 #define TRAPVVGTE(a, b, fmt) TRAPVXGTE(a, b, b, fmt)
 #define TRAPVVLTE(a, b, fmt) TRAPVXLTE(a, b, b, fmt)
 
-#define TRAPXXXOOR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)<(xmin))||((x)>(xmax)), labelx##_oor_##labelmin##_##labelmax, "("#x")=="fmt" out of range ["fmt","fmt"]", (x), (xmin), (xmax))
+#define TRAPXXXOOR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)<(xmin))||((x)>(xmax)), labelx##_oor_##labelmin##_##labelmax, "("#x")==%"fmt" out of range [%"fmt",%"fmt"]", (x), (xmin), (xmax))
 #define TRAPVXXOOR(v, xmin, xmax, labelmin, labelmax, fmt) TRAPXXXOOR(v, xmin, xmax, v, labelmin, labelmax, fmt)
 #define TRAPVVXOOR(v, vmin, xmax, labelmax, fmt) TRAPVXXOOR(v, vmin, xmax, vmin, labelmax, fmt)
 #define TRAPVXVOOR(v, xmin, vmax, labelmin, fmt) TRAPVXXOOR(v, xmin, vmax, labelmin, vmax, fmt)
 #define TRAPVVVOOR(v, vmin, vmax, fmt) TRAPVXXOOR(v, vmin, vmax, vmin, vmax, fmt)\
 
-#define TRAPXXXINR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)>=(xmin))&&((x)<=(xmax)), labelx##_inr_##labelmin##_##labelmax, "("#x")=="fmt" in range ["fmt","fmt"]", (x), (xmin), (xmax))
+#define TRAPXXXINR(x, xmin, xmax, labelx, labelmin, labelmax, fmt) TRAP(((x)>=(xmin))&&((x)<=(xmax)), labelx##_inr_##labelmin##_##labelmax, "("#x")==%"fmt" in range [%"fmt",%"fmt"]", (x), (xmin), (xmax))
 #define TRAPVXXINR(v, xmin, xmax, labelmin, labelmax, fmt) TRAPXXXINR(v, xmin, xmax, v, labelmin, labelmax, fmt)
 #define TRAPVVXINR(v, vmin, xmax, labelmax, fmt) TRAPVXXINR(v, vmin, xmax, vmin, labelmax, fmt)
 #define TRAPVXVINR(v, xmin, vmax, labelmin, fmt) TRAPVXXINR(v, xmin, vmax, labelmin, vmax, fmt)
 #define TRAPVVVINR(v, vmin, vmax, fmt) TRAPVXXINR(v, vmin, vmax, vmin, vmax, fmt)\
 
-#define TRAPF(cond, func, fmt, ...) TRAP(cond, func, #func"(): " fmt, __VA_ARGS__)
-#define TRAPFE(cond, func) TRAPF(cond, func, "%s", LGK_TNT_STRERROR(errno))
-#define TRAPFS(cond, func, suffix, fmt, ...) TRAP(cond, func##_##suffix, #func"(): " fmt, __VA_ARGS__)
-#define TRAPFES(cond, func, suffix) TRAPFS(cond, func, suffix, "%s", LGK_TNT_STRERROR(errno))
+#define TRAPF(cond, func, value, fmt) TRAP(cond, func, #func"()==%" fmt, (value))
+#define TRAPFE(cond, func) TRAP(cond, func, #func"()==%s", LGK_TNT_STRERROR(errno))
+#define TRAPFS(cond, func, suffix, value, fmt) TRAP(cond, func##_##suffix, #func"()==%" fmt, (value))
+#define TRAPFES(cond, func, suffix) TRAP(cond, func##_##suffix, #func"()==%s", LGK_TNT_STRERROR(errno))
 
 #define TRAP_SILENT(cond, label)\
     {\

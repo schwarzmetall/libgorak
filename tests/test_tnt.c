@@ -122,11 +122,11 @@ static void test_trace_shorts(void)
     NOTICE("notice %d", 1);
     INFO("info %d", 1);
     DEBUG("debug %d", 1);
-    CRITF(testfunc, "crit %d", 1);
-    ERRF(testfunc, "err %d", 1);
+    CRITF(testfunc, 1, "d");
+    ERRF(testfunc, 1, "d");
     CRITFE(testfunc);
     ERRFE(testfunc);
-    DEBUGV(42, "%d");
+    DEBUGV(42, "d");
 }
 #endif
 
@@ -217,7 +217,7 @@ static void test_trap_compare_xx(void)
 
     /* arithmetic */
     jumped = 0;
-    TRAPXXEQ(1 + 1, 2, aa, bb, "%d");
+    TRAPXXEQ(1 + 1, 2, aa, bb, "d");
     test_assert(0 && "TRAPXXEQ(1+1,2) should jump");
     TRAP_LABEL(aa_eq_bb):
     jumped = 1;
@@ -225,7 +225,7 @@ static void test_trap_compare_xx(void)
 
     /* bitwise: (a&1)==1 must be parenthesized */
     jumped = 0;
-    TRAPXXEQ(a & 1, 1, mx, my, "%d");
+    TRAPXXEQ(a & 1, 1, mx, my, "d");
     test_assert(0 && "TRAPXXEQ(a&1,1) with a=1 should jump");
     TRAP_LABEL(mx_eq_my):
     jumped = 1;
@@ -233,7 +233,7 @@ static void test_trap_compare_xx(void)
 
     /* shift: (a<<1)!=3 -> 2!=3 true */
     jumped = 0;
-    TRAPXXNEQ(a << 1, 3, sa, sb, "%d");
+    TRAPXXNEQ(a << 1, 3, sa, sb, "d");
     test_assert(0 && "TRAPXXNEQ(a<<1,3) should jump");
     TRAP_LABEL(sa_neq_sb):
     jumped = 1;
@@ -241,7 +241,7 @@ static void test_trap_compare_xx(void)
 
     /* ternary: (a?5:0)>1 -> 5>1 true */
     jumped = 0;
-    TRAPXXGT(a ? 5 : 0, 1, ta, tb, "%d");
+    TRAPXXGT(a ? 5 : 0, 1, ta, tb, "d");
     test_assert(0 && "TRAPXXGT(ternary,1) should jump");
     TRAP_LABEL(ta_gt_tb):
     jumped = 1;
@@ -249,7 +249,7 @@ static void test_trap_compare_xx(void)
 
     /* deref: *pa<10 -> 5<10 true */
     jumped = 0;
-    TRAPXXLT(*pa, 10, da, db, "%d");
+    TRAPXXLT(*pa, 10, da, db, "d");
     test_assert(0 && "TRAPXXLT(*pa,10) should jump");
     TRAP_LABEL(da_lt_db):
     jumped = 1;
@@ -257,7 +257,7 @@ static void test_trap_compare_xx(void)
 
     /* array+arith: (arr[0]+arr[1])>=3 -> 3>=3 true */
     jumped = 0;
-    TRAPXXGTE(arr[0] + arr[1], 3, aa2, bb2, "%d");
+    TRAPXXGTE(arr[0] + arr[1], 3, aa2, bb2, "d");
     test_assert(0 && "TRAPXXGTE(arr[0]+arr[1],3) should jump");
     TRAP_LABEL(aa2_gte_bb2):
     jumped = 1;
@@ -265,7 +265,7 @@ static void test_trap_compare_xx(void)
 
     /* unary minus: -a<=0 -> -1<=0 true */
     jumped = 0;
-    TRAPXXLTE(-a, 0, na, nb, "%d");
+    TRAPXXLTE(-a, 0, na, nb, "d");
     test_assert(0 && "TRAPXXLTE(-a,0) should jump");
     TRAP_LABEL(na_lte_nb):
     jumped = 1;
@@ -277,10 +277,10 @@ static void test_trap_compare_xx_no_jump(void)
     int a = 1;
     /* (a&2)==1 with a=1 -> 0==1 false; without parens 1&(2==1)=1&0=0 also falsy.
        The point is just to confirm the no-jump path works with a compound expr. */
-    TRAPXXEQ(a & 2, 1, nj, nj2, "%d");
+    TRAPXXEQ(a & 2, 1, nj, nj2, "d");
     /* Confirm we fell through. Also exercise a different operator: */
-    TRAPXXGT(a << 1, 100, nj3, nj4, "%d");
-    TRAPXXLT(a ? 5 : 0, 1, nj5, nj6, "%d");
+    TRAPXXGT(a << 1, 100, nj3, nj4, "d");
+    TRAPXXLT(a ? 5 : 0, 1, nj5, nj6, "d");
     return;
     TRAP_LABEL(nj_eq_nj2):
     test_assert(0 && "TRAPXXEQ no-jump path failed");
@@ -300,7 +300,7 @@ static void test_trap_compare_vx_vv(void)
 
     /* TRAPVXEQ: myvar == (arr[0]+arr[1]) -> 3==3 true */
     jumped = 0;
-    TRAPVXEQ(myvar, arr[0] + arr[1], lx, "%d");
+    TRAPVXEQ(myvar, arr[0] + arr[1], lx, "d");
     test_assert(0 && "TRAPVXEQ should jump");
     TRAP_LABEL(myvar_eq_lx):
     jumped = 1;
@@ -308,7 +308,7 @@ static void test_trap_compare_vx_vv(void)
 
     /* TRAPVVGT: big > small -> 10>1 true */
     jumped = 0;
-    TRAPVVGT(big, small, "%d");
+    TRAPVVGT(big, small, "d");
     test_assert(0 && "TRAPVVGT should jump");
     TRAP_LABEL(big_gt_small):
     jumped = 1;
@@ -316,7 +316,7 @@ static void test_trap_compare_vx_vv(void)
 
     /* TRAPVVLTE: eq1 <= eq2 -> 5<=5 true */
     jumped = 0;
-    TRAPVVLTE(eq1, eq2, "%d");
+    TRAPVVLTE(eq1, eq2, "d");
     test_assert(0 && "TRAPVVLTE should jump");
     TRAP_LABEL(eq1_lte_eq2):
     jumped = 1;
@@ -329,7 +329,7 @@ static void test_trap_range_oor(void)
 
     /* below range: 0 not in [10,20], complex bound expressions */
     jumped = 0;
-    TRAPXXXOOR(2 * 0, 5 + 5, 4 * 5, xv1, lmin1, lmax1, "%d");
+    TRAPXXXOOR(2 * 0, 5 + 5, 4 * 5, xv1, lmin1, lmax1, "d");
     test_assert(0 && "below-range OOR should jump");
     TRAP_LABEL(xv1_oor_lmin1_lmax1):
     jumped = 1;
@@ -337,14 +337,14 @@ static void test_trap_range_oor(void)
 
     /* above range: 30 not in [10,20] */
     jumped = 0;
-    TRAPXXXOOR(30, 10, 20, xv2, lmin2, lmax2, "%d");
+    TRAPXXXOOR(30, 10, 20, xv2, lmin2, lmax2, "d");
     test_assert(0 && "above-range OOR should jump");
     TRAP_LABEL(xv2_oor_lmin2_lmax2):
     jumped = 1;
     test_assert(jumped == 1);
 
     /* in range: no trap */
-    TRAPXXXOOR(15, 10, 20, xv3, lmin3, lmax3, "%d");
+    TRAPXXXOOR(15, 10, 20, xv3, lmin3, lmax3, "d");
     return;
     TRAP_LABEL(xv3_oor_lmin3_lmax3):
     test_assert(0 && "in-range OOR must not jump");
@@ -355,7 +355,7 @@ static void test_trap_range_oor_variants(void)
     {
         int v = 5, xmin = 10, xmax = 20;
         int jumped = 0;
-        TRAPVXXOOR(v, xmin, xmax, lm, lx, "%d");
+        TRAPVXXOOR(v, xmin, xmax, lm, lx, "d");
         test_assert(0 && "TRAPVXXOOR should jump");
         TRAP_LABEL(v_oor_lm_lx):
         jumped = 1;
@@ -364,7 +364,7 @@ static void test_trap_range_oor_variants(void)
     {
         int v = 5, vmin = 10, xmax = 20;
         int jumped = 0;
-        TRAPVVXOOR(v, vmin, xmax, lm2, "%d");
+        TRAPVVXOOR(v, vmin, xmax, lm2, "d");
         test_assert(0 && "TRAPVVXOOR should jump");
         TRAP_LABEL(v_oor_vmin_lm2):
         jumped = 1;
@@ -373,7 +373,7 @@ static void test_trap_range_oor_variants(void)
     {
         int v = 25, xmin = 10, vmax = 20;
         int jumped = 0;
-        TRAPVXVOOR(v, xmin, vmax, lm3, "%d");
+        TRAPVXVOOR(v, xmin, vmax, lm3, "d");
         test_assert(0 && "TRAPVXVOOR should jump");
         TRAP_LABEL(v_oor_lm3_vmax):
         jumped = 1;
@@ -382,7 +382,7 @@ static void test_trap_range_oor_variants(void)
     {
         int v = 25, vmin = 10, vmax = 20;
         int jumped = 0;
-        TRAPVVVOOR(v, vmin, vmax, "%d");
+        TRAPVVVOOR(v, vmin, vmax, "d");
         test_assert(0 && "TRAPVVVOOR should jump");
         TRAP_LABEL(v_oor_vmin_vmax):
         jumped = 1;
@@ -396,16 +396,16 @@ static void test_trap_range_inr(void)
 
     /* in range: 2 in [1,10] */
     jumped = 0;
-    TRAPXXXINR(1 + 1, 1, 10, xv1, lmin1, lmax1, "%d");
+    TRAPXXXINR(1 + 1, 1, 10, xv1, lmin1, lmax1, "d");
     test_assert(0 && "in-range INR should jump");
     TRAP_LABEL(xv1_inr_lmin1_lmax1):
     jumped = 1;
     test_assert(jumped == 1);
 
     /* below range: 0 not in [10,20] */
-    TRAPXXXINR(0, 10, 20, xv2, lmin2, lmax2, "%d");
+    TRAPXXXINR(0, 10, 20, xv2, lmin2, lmax2, "d");
     /* above range: 30 not in [10,20] */
-    TRAPXXXINR(30, 10, 20, xv3, lmin3, lmax3, "%d");
+    TRAPXXXINR(30, 10, 20, xv3, lmin3, lmax3, "d");
     return;
     TRAP_LABEL(xv2_inr_lmin2_lmax2):
     test_assert(0 && "below-range INR must not jump");
@@ -418,7 +418,7 @@ static void test_trap_range_inr_variants(void)
     {
         int v = 15, xmin = 10, xmax = 20;
         int jumped = 0;
-        TRAPVXXINR(v, xmin, xmax, lm, lx, "%d");
+        TRAPVXXINR(v, xmin, xmax, lm, lx, "d");
         test_assert(0 && "TRAPVXXINR should jump");
         TRAP_LABEL(v_inr_lm_lx):
         jumped = 1;
@@ -427,7 +427,7 @@ static void test_trap_range_inr_variants(void)
     {
         int v = 15, vmin = 10, xmax = 20;
         int jumped = 0;
-        TRAPVVXINR(v, vmin, xmax, lm2, "%d");
+        TRAPVVXINR(v, vmin, xmax, lm2, "d");
         test_assert(0 && "TRAPVVXINR should jump");
         TRAP_LABEL(v_inr_vmin_lm2):
         jumped = 1;
@@ -436,7 +436,7 @@ static void test_trap_range_inr_variants(void)
     {
         int v = 15, xmin = 10, vmax = 20;
         int jumped = 0;
-        TRAPVXVINR(v, xmin, vmax, lm3, "%d");
+        TRAPVXVINR(v, xmin, vmax, lm3, "d");
         test_assert(0 && "TRAPVXVINR should jump");
         TRAP_LABEL(v_inr_lm3_vmax):
         jumped = 1;
@@ -445,7 +445,7 @@ static void test_trap_range_inr_variants(void)
     {
         int v = 15, vmin = 10, vmax = 20;
         int jumped = 0;
-        TRAPVVVINR(v, vmin, vmax, "%d");
+        TRAPVVVINR(v, vmin, vmax, "d");
         test_assert(0 && "TRAPVVVINR should jump");
         TRAP_LABEL(v_inr_vmin_vmax):
         jumped = 1;

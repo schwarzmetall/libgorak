@@ -10,15 +10,15 @@ int cnd_timedwait_ms(cnd_t *cond, mtx_t *mutex, int timeout_ms)
     if(timeout_ms<0)
     {
         status = cnd_wait(cond, mutex);
-        TRAPF(status!=thrd_success, cnd_wait, "%i", status);
+        TRAPF(status!=thrd_success, cnd_wait, status, "i");
     }
     else
     {
         struct timespec ts;
         status = timeout_ms ? timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms) : timespec_get(&ts, TIME_UTC);
-        TRAPF(status, timespec_get_offset_ms, "%i", status);
+        TRAPF(status, timespec_get_offset_ms, status, "i");
         status = cnd_timedwait(cond, mutex, &ts);
-        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), cnd_timedwait, "%i", status);
+        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), cnd_timedwait, status, "i");
     }
     return status;
 trap_cnd_timedwait:

@@ -73,7 +73,7 @@
         do\
         {\
             next = name##_step(fsm);\
-            TRAPF(next<0, name##_step, "%i", (int)next);\
+            TRAPF(next<0, name##_step, (int)next, "i");\
         } while(next);\
         return 0;\
     trap_##name##_step:\
@@ -84,11 +84,11 @@
     int_fast8_t name##_event_process(struct name *fsm, type_event event, type_event_data event_data)\
     {\
         type_state next = name##_event(fsm, event, event_data);\
-        TRAPF(next<0, name##_event, "%i", (int)next);\
+        TRAPF(next<0, name##_event, (int)next, "i");\
         if(next)\
         {\
             next = name##_process(fsm);\
-            TRAPF(next, name##_process, "%i", (int)next);\
+            TRAPF(next, name##_process, (int)next, "i");\
         }\
         return 0;\
     trap_##name##_process:\

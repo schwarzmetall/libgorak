@@ -4,17 +4,17 @@
 
 int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *ts)
 {
-    TRAPVNULL(mutex);
     int status = thrd_error;
+    TRAPVNULL(mutex);
     if(ts)
     {
         status = mtx_timedlock(mutex, ts);
-        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), mtx_timedlock, "%i", status);
+        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), mtx_timedlock, status, "i");
     }
     else
     {
         status = mtx_lock(mutex);
-        TRAPF(status!=thrd_success, mtx_lock, "%i", status);
+        TRAPF(status!=thrd_success, mtx_lock, status, "i");
     }
     return status;
 trap_mtx_lock:

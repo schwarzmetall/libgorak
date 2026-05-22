@@ -26,7 +26,7 @@ int_fast8_t lgk_bitmap_get(const struct lgk_bitmap *bitmap, unsigned i)
 {
     TRAPVNULL(bitmap);
     TRAPXNULL(bitmap->map, map);
-    TRAPVXGTE(i, bitmap->size, size, "%i");
+    TRAPVXGTE(i, bitmap->size, size, "i");
     unsigned i_word = i / BITSIZE(bitmap->map[0]);
     lgk_bitmap_t mask = 1 << (i % BITSIZE(bitmap->map[0]));
     return ((bitmap->map[i_word] & mask) != 0);
@@ -40,7 +40,7 @@ int_fast8_t lgk_bitmap_set(struct lgk_bitmap *bitmap, unsigned i, int_fast8_t se
 {
     TRAPVNULL(bitmap);
     TRAPXNULL(bitmap->map, map);
-    TRAPVXGTE(i, bitmap->size, size, "%i");
+    TRAPVXGTE(i, bitmap->size, size, "i");
     unsigned i_word = i / BITSIZE(bitmap->map[0]);
     lgk_bitmap_t mask = 1 << (i % BITSIZE(bitmap->map[0]));
     bitmap->map[i_word] = setval ? (bitmap->map[i_word] | mask) : ( bitmap->map[i_word] & ~mask);
@@ -62,7 +62,7 @@ struct lgk_bitmap *lgk_bitmap_alloc(unsigned size, int_fast8_t setval)
         TRAPFES(!map, malloc, map);
     }
     int_fast8_t status = lgk_bitmap_init(bitmap, map, size, setval);
-    TRAPF(status, lgk_bitmap_init, "%i", status);
+    TRAPF(status, lgk_bitmap_init, status, "i");
     return bitmap;
 trap_lgk_bitmap_init:
     free(map);

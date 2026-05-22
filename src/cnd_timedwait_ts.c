@@ -10,12 +10,12 @@ int cnd_timedwait_ts(cnd_t *cond, mtx_t *mutex, const struct timespec *ts)
     if(ts)
     {
         status = cnd_timedwait(cond, mutex, ts);
-        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), cnd_timedwait, "%i", status);
+        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), cnd_timedwait, status, "i");
     }
     else
     {
         status = cnd_wait(cond, mutex);
-        TRAPF(status!=thrd_success, cnd_wait, "%i", status);
+        TRAPF(status!=thrd_success, cnd_wait, status, "i");
     }
     return status;
 trap_cnd_wait:

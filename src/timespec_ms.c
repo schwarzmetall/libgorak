@@ -28,9 +28,9 @@ int_fast8_t timespec_get_offset_ms(struct timespec *ts, int base, int offset_ms)
 {
     TRAPVNULL(ts);
     int status = timespec_get(ts, base);
-    TRAPF(status!=base, timespec_get, "%i", base, status);
+    TRAPF(status!=base, timespec_get, status, "i");
     status = timespec_offset_ms(ts, offset_ms);
-    TRAPF(status, timespec_offset_ms, "%i", status);
+    TRAPF(status, timespec_offset_ms, status, "i");
     return 0;
 trap_timespec_offset_ms:
 trap_timespec_get:
