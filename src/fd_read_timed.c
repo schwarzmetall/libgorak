@@ -10,11 +10,11 @@ ssize_t fd_read_timed(int fd, void *buf, size_t count, int timeout_ms, int_fast8
     if(!count) return 0;
     struct pollfd fds = { fd, POLLIN, 0 };
     int status_poll = poll(&fds, 1, timeout_ms);
-    TRAPFE((status_poll<0)||(fds.revents&(POLLERR|POLLNVAL)), poll);
+    TRAPFE((status_poll<0)||(fds.revents&(POLLERR|POLLNVAL)), poll, status_poll, "i");
     if(pollerr) *pollerr = 0;
     if(!status_poll) return 0;
     ssize_t nread = read(fd, buf, count);
-    TRAPFE(nread<0, read);
+    TRAPFE(nread<0, read, nread, "zi");
     return nread;
 trap_read:
 trap_poll:

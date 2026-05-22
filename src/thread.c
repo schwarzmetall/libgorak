@@ -11,7 +11,7 @@ static int thread_start_wrapper(void *arg_wrapper)
     t->res = t->start(t->arg);
     atomic_store_explicit(&t->stopped, 1, memory_order_release);
     int status = cnd_broadcast(&t->monitor->cond);
-    if(status != thrd_success) CRITF(cnd_broadcast, status, "i");
+    if(status != thrd_success) CRITFT(cnd_broadcast, status);
     return status;
 trap_t_null:
     return thrd_error;
@@ -26,7 +26,7 @@ int lgk_thread_create(struct lgk_thread *t, thrd_start_t start, void *arg, struc
     t->monitor = monitor;
     atomic_init(&t->stopped, 0);
     int status = thrd_create(&t->thread, thread_start_wrapper, t);
-    if(status!=thrd_success) CRITF(thrd_create, status, "i");
+    if(status!=thrd_success) CRITFT(thrd_create, status);
     return status;
 trap_t_null:
     return thrd_error;
@@ -45,23 +45,23 @@ int lgk_thread_join(struct lgk_thread *t, int *res, int timeout_ms, int_fast8_t 
         status = timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms);
         TRAPF(status, timespec_get_offset_ms, status, "i");
         status = mtx_timedlock_ts(&t->monitor->mutex, &ts);
-        TRAPF(status!=thrd_success, mtx_timedlock_ts, status, "i");
+        TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);
         while(!atomic_load_explicit(&t->stopped, memory_order_acquire) && (status==thrd_success)) status = cnd_timedwait_ts(&t->monitor->cond, &t->monitor->mutex, &ts);
-        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), cnd_timedwait_ts, status, "i");
+        TRAPFT(THRD_FAIL(status), cnd_timedwait_ts, status);
         status_unlock = mtx_unlock(&t->monitor->mutex);
-        TRAPF(status_unlock!=thrd_success, mtx_unlock, status_unlock, "i");
+        TRAPFT(status_unlock!=thrd_success, mtx_unlock, status_unlock);
         if(status == thrd_timedout)
         {
             if(timeout_detach)
             {
                 int status_detach = thrd_detach(t->thread);
-                if(status_detach != thrd_success) CRITF(thrd_detach, status_detach, "i");
+                if(status_detach != thrd_success) CRITFT(thrd_detach, status_detach);
             }
             return status;
         }
     }
     status = thrd_join(t->thread, &res_wrapper);
-    TRAPF(status!=thrd_success, thrd_join, status, "i");
+    TRAPFT(status!=thrd_success, thrd_join, status);
     if(res_wrapper != thrd_success) status = thrd_error;
     else *res = t->res;
     if(!atomic_load_explicit(&t->stopped, memory_order_acquire)) CRIT("t->stopped==%i", (int)atomic_load(&t->stopped));
@@ -72,7 +72,7 @@ trap_mtx_unlock:
     return status_unlock;
 trap_cnd_timedwait_ts:
     status_unlock = mtx_unlock(&t->monitor->mutex);
-    if(status_unlock != thrd_success) CRITF(mutex_unlock, status_unlock, "i");
+    if(status_unlock != thrd_success) CRITFT(mutex_unlock, status_unlock);
 trap_mtx_timedlock_ts:
     return status;
 trap_timespec_get_offset_ms:

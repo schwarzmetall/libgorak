@@ -9,12 +9,12 @@ int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *ts)
     if(ts)
     {
         status = mtx_timedlock(mutex, ts);
-        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), mtx_timedlock, status, "i");
+        TRAPFT(THRD_FAIL(status), mtx_timedlock, status);
     }
     else
     {
         status = mtx_lock(mutex);
-        TRAPF(status!=thrd_success, mtx_lock, status, "i");
+        TRAPFT(status!=thrd_success, mtx_lock, status);
     }
     return status;
 trap_mtx_lock:

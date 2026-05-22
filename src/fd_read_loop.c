@@ -22,10 +22,10 @@ size_t fd_read_loop(int fd, void *buf, size_t count, int timeout_ms, int_fast8_t
     {
         struct pollfd fds = { fd, POLLREADMASK, 0 };
         int status_poll = poll(&fds, 1, timeout_ms);
-        TRAPFE((status_poll<0)||(fds.revents&POLLERRMASK), poll);
+        TRAPFE((status_poll<0)||(fds.revents&POLLERRMASK), poll, status_poll, "i");
         if(!status_poll) break;
         ssize_t nread = read(fd, p_buf, nleft);
-        TRAPFE(nread<0, read);
+        TRAPFE(nread<0, read, nread, "zi");
         if(!nread) break;
         nleft -= nread;
         p_buf += nread;

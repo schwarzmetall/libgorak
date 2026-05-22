@@ -54,12 +54,12 @@ trap_bitmap_null:
 struct lgk_bitmap *lgk_bitmap_alloc(unsigned size, int_fast8_t setval)
 {
     struct lgk_bitmap *bitmap = malloc(sizeof(struct lgk_bitmap));
-    TRAPFES(!bitmap, malloc, struct);
+    TRAPFES(!bitmap, malloc, struct, bitmap, "p");
     lgk_bitmap_t *map = NULL;
     if(size)
     {
         map =  malloc(INTDIVCEIL(size,8));
-        TRAPFES(!map, malloc, map);
+        TRAPFES(!map, malloc, map, map, "p");
     }
     int_fast8_t status = lgk_bitmap_init(bitmap, map, size, setval);
     TRAPF(status, lgk_bitmap_init, status, "i");

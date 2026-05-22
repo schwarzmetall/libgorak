@@ -10,12 +10,12 @@ ssize_t fd_write_timed(int fd, const void *buf, size_t count, int timeout_ms, in
     if(!count) return 0;
     struct pollfd fds = { fd, POLLOUT, 0 };
     int status_poll = poll(&fds, 1, timeout_ms);
-    TRAPFE((status_poll<0)||(fds.revents&(POLLERR|POLLNVAL)), poll);
+    TRAPFE((status_poll<0)||(fds.revents&(POLLERR|POLLNVAL)), poll, status_poll, "i");
     if(pollerr) *pollerr = 0;
     if(!status_poll) return 0;
     if(fds.revents & POLLHUP) return 0;
     ssize_t nwritten = write(fd, buf, count);
-    TRAPFE(nwritten<0, write);
+    TRAPFE(nwritten<0, write, nwritten, "zi");
     return nwritten;
 trap_write:
 trap_poll:

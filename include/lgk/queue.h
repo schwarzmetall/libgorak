@@ -36,11 +36,11 @@
         q->size = size;\
         q->used = q->i_read = q->i_write = 0;\
         int status = mtx_init(&q->mutex, timed ? mtx_timed : mtx_plain);\
-        TRAPF(status!=thrd_success, mtx_init, lgk_thrdstrerror(status), "s");\
+        TRAPFT(status!=thrd_success, mtx_init, status);\
         status = cnd_init(&q->cnd_readable);\
-        TRAPFS(status!=thrd_success, cnd_init, readable, lgk_thrdstrerror(status), "s");\
+        TRAPFTS(status!=thrd_success, cnd_init, readable, status);\
         status = cnd_init(&q->cnd_writable);\
-        TRAPFS(status!=thrd_success, cnd_init, writable, lgk_thrdstrerror(status), "s");\
+        TRAPFTS(status!=thrd_success, cnd_init, writable, status);\
         return status;\
     trap_cnd_init_writable:\
         cnd_destroy(&q->cnd_readable);\
@@ -59,7 +59,7 @@
         TRAPVNULL(q);\
         TRAP(used>size, used, "used > size");\
         int status = name##_init(q, buffer, size, timed);\
-        TRAPF(status!=thrd_success, name##_init, lgk_thrdstrerror(status), "s");\
+        TRAPFT(status!=thrd_success, name##_init, status);\
         q->used = used;\
         if(used<size) q->i_write = used;\
         return status;\
@@ -97,7 +97,7 @@
         }\
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
-        TRAPF(status!=thrd_success, mtx_timedlock_ts, lgk_thrdstrerror(status), "s");\
+        TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
         while((status==thrd_success) && (q->size==q->used)) status = cnd_timedwait_ts(&q->cnd_writable, &q->mutex, ts_ptr);\
         if(status == thrd_success)\
         {\
@@ -107,7 +107,7 @@
                 if(q->i_write == q->size) q->i_write = 0;\
                 q->used++;\
                 status = cnd_signal(&q->cnd_readable);\
-                if(status != thrd_success) CRITF(cnd_signal, lgk_thrdstrerror(status), "s");\
+                if(status != thrd_success) CRITFT(cnd_signal, status);\
             }\
             else\
             {\
@@ -116,10 +116,10 @@
         }\
         else\
         {\
-            if(status != thrd_timedout) CRITF(cnd_timedwait_ts, lgk_thrdstrerror(status), "s");\
+            if(status != thrd_timedout) CRITFT(cnd_timedwait_ts, status);\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
-        if(status_unlock != thrd_success) CRITF(mtx_unlock, lgk_thrdstrerror(status_unlock), "s");\
+        if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
         return (status == thrd_success) ? status_unlock : status;\
     trap_mtx_timedlock_ts:\
     trap_timespec_get_offset_ms:\
@@ -142,7 +142,7 @@
         }\
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
-        TRAPF(status!=thrd_success, mtx_timedlock_ts, lgk_thrdstrerror(status), "s");\
+        TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
         while((status==thrd_success) && !q->used) status = cnd_timedwait_ts(&q->cnd_readable, &q->mutex, ts_ptr);\
         if(status == thrd_success)\
         {\
@@ -152,7 +152,7 @@
                 if(q->i_read == q->size) q->i_read = 0;\
                 q->used--;\
                 status = cnd_signal(&q->cnd_writable);\
-                if(status != thrd_success) CRITF(cnd_signal, lgk_thrdstrerror(status), "s");\
+                if(status != thrd_success) CRITFT(cnd_signal, status);\
             }\
             else\
             {\
@@ -161,10 +161,10 @@
         }\
         else\
         {\
-            if(status != thrd_timedout) CRITF(cnd_timedwait_ts, lgk_thrdstrerror(status), "s");\
+            if(status != thrd_timedout) CRITFT(cnd_timedwait_ts, status);\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
-        if(status_unlock != thrd_success) CRITF(mtx_unlock, lgk_thrdstrerror(status), "s");\
+        if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
         return (status == thrd_success) ? status_unlock : status;\
     trap_mtx_timedlock_ts:\
     trap_timespec_get_offset_ms:\

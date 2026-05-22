@@ -23,10 +23,10 @@ size_t fd_write_loop(int fd, const void *buf, size_t count, int timeout_ms, int_
     {
         struct pollfd fds = { fd, POLLWRITEMASK, 0 };
         int status_poll = poll(&fds, 1, timeout_ms);
-        TRAPFE((status_poll<0)||(fds.revents&POLLERRMASK), poll);
+        TRAPFE((status_poll<0)||(fds.revents&POLLERRMASK), poll, status_poll, "i");
         if(!status_poll || (fds.revents & POLLHUP)) break;
         ssize_t nwritten = write(fd, p_buf, nleft);
-        TRAPFE(nwritten<0, write);
+        TRAPFE(nwritten<0, write, nwritten, "zi");
         nleft -= nwritten;
         p_buf += nwritten;
     }

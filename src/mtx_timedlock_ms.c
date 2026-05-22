@@ -10,7 +10,7 @@ int mtx_timedlock_ms(mtx_t *mutex, int timeout_ms)
     if(timeout_ms<0)
     {
         status = mtx_lock(mutex);
-        TRAPF((status!=thrd_success), mtx_lock, status, "i");
+        TRAPFT(status!=thrd_success, mtx_lock, status);
     }
     else
     {
@@ -18,7 +18,7 @@ int mtx_timedlock_ms(mtx_t *mutex, int timeout_ms)
         status = timeout_ms ? timespec_get_offset_ms(&ts, TIME_UTC, timeout_ms) : timespec_get(&ts, TIME_UTC);
         TRAPF(status, timespec_get_offset_ms, status, "i");
         status = mtx_timedlock(mutex, &ts);
-        TRAPF((status!=thrd_success)&&(status!=thrd_timedout), mtx_timedlock, status, "i");
+        TRAPFT(THRD_FAIL(status), mtx_timedlock, status);
     }
     return status;
 trap_mtx_timedlock:

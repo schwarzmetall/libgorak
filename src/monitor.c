@@ -6,9 +6,9 @@ int lgk_monitor_init(struct lgk_monitor *m, int_fast8_t timed)
 {
     TRAPVNULL(m);
     int status = mtx_init(&m->mutex, timed?mtx_timed:mtx_plain);
-    TRAPF(status!=thrd_success, mtx_init, status, "i");
+    TRAPFT(status!=thrd_success, mtx_init, status);
     status = cnd_init(&m->cond);
-    TRAPF(status!=thrd_success, cnd_init, status, "i");
+    TRAPFT(status!=thrd_success, cnd_init, status);
     return status;
 trap_cnd_init:
     mtx_destroy(&m->mutex);

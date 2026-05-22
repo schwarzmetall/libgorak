@@ -124,8 +124,8 @@ static void test_trace_shorts(void)
     DEBUG("debug %d", 1);
     CRITF(testfunc, 1, "d");
     ERRF(testfunc, 1, "d");
-    CRITFE(testfunc);
-    ERRFE(testfunc);
+    CRITFE(testfunc, -1, "d");
+    ERRFE(testfunc, -1, "d");
     DEBUGV(42, "d");
 }
 #endif
@@ -134,11 +134,11 @@ static void test_trace_shorts(void)
 static void test_errno_macros(void)
 {
     errno = EINVAL;
-    TRACEFE(TRACE_LEVEL_CRITICAL, testfunc);
+    TRACEFE(TRACE_LEVEL_CRITICAL, testfunc, -1, "d");
 
     int trapped = 0;
     errno = EINVAL;
-    TRAPFE(1, efunc);
+    TRAPFE(1, efunc, -1, "d");
     test_assert(0 && "TRAPFE should jump");
     TRAP_LABEL(efunc):
     trapped = 1;
@@ -146,7 +146,7 @@ static void test_errno_macros(void)
 
     int trapped2 = 0;
     errno = EINVAL;
-    TRAPFES(1, sfunc, err);
+    TRAPFES(1, sfunc, err, -1, "d");
     test_assert(0 && "TRAPFES should jump");
     TRAP_LABEL(sfunc_err):
     trapped2 = 1;
