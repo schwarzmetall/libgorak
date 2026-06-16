@@ -90,7 +90,14 @@ target_sources(libgorak PRIVATE
 # remove "lib" prefix since it's already part of the project name
 set_target_properties(libgorak PROPERTIES PREFIX "")
 
-include(CTest)
-if(BUILD_TESTING)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set(_libgorak_build_tests_default ON)
+else()
+    set(_libgorak_build_tests_default OFF)
+endif()
+option(LIBGORAK_BUILD_TESTS "Build libgorak unit tests" ${_libgorak_build_tests_default})
+
+if(LIBGORAK_BUILD_TESTS)
+    include(CTest)
     add_subdirectory(tests)
 endif()
