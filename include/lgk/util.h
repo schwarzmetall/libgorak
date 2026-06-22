@@ -29,6 +29,8 @@
 
 #define ASSERT_SIGNED(type) static_assert(((type)-1)<0)
 
+#define SIZEOFSM(type, member) sizeof(((type *)0)->member)
+
 unsigned digits(unsigned value, unsigned base);
 
 #endif
