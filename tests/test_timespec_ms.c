@@ -75,6 +75,26 @@ static void test_timespec_get_offset_ms_applies_offset(void)
     test_assert(ts_after.tv_sec >= ts_before.tv_sec + 1);
 }
 
+static void test_timespec_to_ms_basic(void)
+{
+    struct timespec ts = { 2, 500*1000*1000 };
+    test_assert(timespec_to_ms(&ts) == 2500);
+}
+
+static void test_timespec_to_ms_sub_ms_truncates(void)
+{
+    struct timespec ts = { 0, 999*1000 };
+    test_assert(timespec_to_ms(&ts) == 0);
+}
+
+static void test_timespec_get_ms_success(void)
+{
+    int64_t ms_before = 0;
+    int status = timespec_get_ms(TIME_UTC, &ms_before);
+    test_assert(!status);
+    test_assert(ms_before > 0);
+}
+
 int main(void)
 {
     test_timespec_offset_ms_zero();
@@ -85,5 +105,8 @@ int main(void)
     test_timespec_offset_ms_negative_into_negative_nsec_normalized();
     test_timespec_get_offset_ms_success();
     test_timespec_get_offset_ms_applies_offset();
+    test_timespec_to_ms_basic();
+    test_timespec_to_ms_sub_ms_truncates();
+    test_timespec_get_ms_success();
     return 0;
 }

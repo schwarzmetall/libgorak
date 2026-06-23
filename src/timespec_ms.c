@@ -37,3 +37,21 @@ trap_timespec_get:
 trap_ts_null:
     return -1;
 }
+
+int64_t timespec_to_ms(const struct timespec *ts)
+{
+    return ((int64_t)ts->tv_sec * 1000) + (ts->tv_nsec / (1000*1000));
+}
+
+int_fast8_t timespec_get_ms(int base, int64_t *out_ms)
+{
+    TRAPVNULL(out_ms);
+    struct timespec ts;
+    int status = timespec_get(&ts, base);
+    TRAPF(status!=base, timespec_get, status, "i");
+    *out_ms = timespec_to_ms(&ts);
+    return 0;
+trap_timespec_get:
+trap_out_ms_null:
+    return -1;
+}
