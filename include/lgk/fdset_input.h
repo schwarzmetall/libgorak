@@ -69,5 +69,6 @@ int fdset_input_init(struct fdset_input *fi, struct fdset_input_fd_info *fd_info
 int fdset_input_close(struct fdset_input *fi, int_fast8_t timeout_detach);
 int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb, void *arg);
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd);
+int fdset_input_async_clear_buffer(struct fdset_input *fi, int fd);
 
 #endif

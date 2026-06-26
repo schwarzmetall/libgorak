@@ -19,6 +19,32 @@ constexpr short POLLREADMASK = POLLIN;
 
 typedef void callback_action(struct fdset_input *fi, unsigned fd_index);
 
+static int_fast8_t pipe_pause(struct fdset_input *fi)
+{
+    ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_PAUSE}, 1, fi->timeout_ms, NULL);
+    TRAPFS(nwritten!=1, fd_write_timed, pause, nwritten, "zi");
+    return 0;
+trap_fd_write_timed_pause:
+    return -1;
+}
+
+static int_fast8_t pipe_resume(struct fdset_input *fi)
+{
+    ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1, fi->timeout_ms, NULL);
+    TRAPFS(nwritten!=1, fd_write_timed, run, nwritten, "zi");
+    return 0;
+trap_fd_write_timed_run:
+    return -1;
+}
+
+/* Returns the index into fd_info_buffer/pollfd_buffer+1 for fd, or fi->nused if not found. */
+static unsigned find_fd_index(const struct fdset_input *fi, int fd)
+{
+    unsigned i;
+    for(i=0; i<fi->nused; i++) if(fi->pollfd_buffer[i+1].fd == fd) break;
+    return i;
+}
+
 static void callback_action_clear_buffer(struct fdset_input *fi, unsigned fd_index)
 {
     fi->fd_info_buffer[fd_index].buffer_used = 0;
@@ -211,26 +237,22 @@ trap_fi_null:
 int fdset_input_async_add_fd(struct fdset_input *fi, int fd, void *buffer, unsigned bufsize, fdset_input_callback *cb, void *arg)
 {
     TRAP(fi->nused >= fi->nmax, full, "nmax==%u, nused==%u", fi->nmax, fi->nused);
-    ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_PAUSE}, 1, fi->timeout_ms, NULL);
-    TRAP(!nwritten, fd_write_timed_timeout_pause, "fd_write_timed(): timeout");
-    TRAPFES(nwritten<0, fd_write_timed, pause, nwritten, "zi");
-    int status = mtx_timedlock_ms(&fi->mutex, fi->timeout_ms);
+    int status = pipe_pause(fi);
+    TRAPF(status, pipe_pause, status, "i");
+    status = mtx_timedlock_ms(&fi->mutex, fi->timeout_ms);
     TRAPFT(status!=thrd_success, mtx_timedlock_ms, status);
     int index = fi->nused++;
     fi->fd_info_buffer[index] = (struct fdset_input_fd_info){cb, arg, bufsize, 0, buffer};
     fi->pollfd_buffer[index+1] = (struct pollfd){fd, POLLIN, 0};
     status = mtx_unlock(&fi->mutex);
     TRAPFT(status!=thrd_success, mtx_unlock, status);
-    nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1, fi->timeout_ms, NULL);
-    TRAP(!nwritten, fd_write_timed_timeout_run, "fd_write_timed(): timeout");
-    TRAPFES(nwritten<0, fd_write_timed, run, nwritten, "zi");
+    status = pipe_resume(fi);
+    TRAPF(status, pipe_resume, status, "i");
     return 0;
-trap_fd_write_timed_run:
-trap_fd_write_timed_timeout_run:
+trap_pipe_resume:
 trap_mtx_unlock:
 trap_mtx_timedlock_ms:
-trap_fd_write_timed_pause:
-trap_fd_write_timed_timeout_pause:
+trap_pipe_pause:
 trap_full:
     return -1;
 }
@@ -238,28 +260,47 @@ trap_full:
 int fdset_input_async_remove_fd(struct fdset_input *fi, int fd)
 {
     TRAP(!fi->nused, empty, "nused==%u", fi->nused);
-    unsigned index;
-    for(index=0; index<fi->nmax; index++) if(fi->pollfd_buffer[index+1].fd == fd) break;
-    TRAP(index>=fi->nmax, invalid_fd, "invalid fd: %i", fd);
-    ssize_t nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_PAUSE}, 1, fi->timeout_ms, NULL);
-    TRAP(!nwritten, fd_write_timed_timeout_pause, "fd_write_timed(): timeout");
-    TRAPFES(nwritten < 0, fd_write_timed, pause, nwritten, "zi");
-    int status = mtx_timedlock_ms(&fi->mutex, fi->timeout_ms);
+    unsigned index = find_fd_index(fi, fd);
+    TRAP(index>=fi->nused, invalid_fd, "fd not found: %i", fd);
+    int status = pipe_pause(fi);
+    TRAPF(status, pipe_pause, status, "i");
+    status = mtx_timedlock_ms(&fi->mutex, fi->timeout_ms);
     TRAPFT(status!=thrd_success, mtx_timedlock_ms, status);
     fi->pollfd_buffer[index+1] = fi->pollfd_buffer[fi->nused--];
     fi->fd_info_buffer[index] = fi->fd_info_buffer[fi->nused];
     status = mtx_unlock(&fi->mutex);
     TRAPFT(status!=thrd_success, mtx_unlock, status);
-    nwritten = fd_write_timed(fi->pipefd_write, &(uint8_t){THREAD_CMD_RUN}, 1, fi->timeout_ms, NULL);
-    TRAP(!nwritten, fd_write_timed_timeout_run, "fd_write_timed(): timeout");
-    TRAPFES(nwritten<0, fd_write_timed, run, nwritten, "zi");
+    status = pipe_resume(fi);
+    TRAPF(status, pipe_resume, status, "i");
     return 0;
-trap_fd_write_timed_run:
-trap_fd_write_timed_timeout_run:
+trap_pipe_resume:
 trap_mtx_unlock:
 trap_mtx_timedlock_ms:
-trap_fd_write_timed_pause:
-trap_fd_write_timed_timeout_pause:
+trap_pipe_pause:
+trap_invalid_fd:
+trap_empty:
+    return -1;
+}
+
+int fdset_input_async_clear_buffer(struct fdset_input *fi, int fd)
+{
+    TRAP(!fi->nused, empty, "nused==%u", fi->nused);
+    unsigned index = find_fd_index(fi, fd);
+    TRAP(index>=fi->nused, invalid_fd, "fd not found: %i", fd);
+    int status = pipe_pause(fi);
+    TRAPF(status, pipe_pause, status, "i");
+    status = mtx_timedlock_ms(&fi->mutex, fi->timeout_ms);
+    TRAPFT(status!=thrd_success, mtx_timedlock_ms, status);
+    fi->fd_info_buffer[index].buffer_used = 0;
+    status = mtx_unlock(&fi->mutex);
+    TRAPFT(status!=thrd_success, mtx_unlock, status);
+    status = pipe_resume(fi);
+    TRAPF(status, pipe_resume, status, "i");
+    return 0;
+trap_pipe_resume:
+trap_mtx_unlock:
+trap_mtx_timedlock_ms:
+trap_pipe_pause:
 trap_invalid_fd:
 trap_empty:
     return -1;
