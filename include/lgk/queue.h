@@ -5,7 +5,7 @@
 #include <time.h>
 #include <threads.h>
 #include <lgk/tnt.h>
-#include <lgk/timespec.h>
+#include <lgk/time_ms.h>
 #include <lgk/threads.h>
 
 #define QUEUE_INIT_HEADER(type_data, type_size, name) int name##_init(struct name *q, type_data *buffer, type_size size, int_fast8_t timed)

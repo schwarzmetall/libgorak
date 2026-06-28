@@ -1,5 +1,5 @@
 #include <lgk/tnt.h>
-#include <lgk/timespec.h>
+#include <lgk/time_ms.h>
 #include <lgk/threads.h>
 
 int cnd_timedwait_ts(cnd_t *cond, mtx_t *mutex, const struct timespec *ts)

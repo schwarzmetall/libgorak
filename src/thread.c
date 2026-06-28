@@ -1,7 +1,7 @@
 #include <stdatomic.h>
 #include <threads.h>
 #include <lgk/tnt.h>
-#include <lgk/timespec.h>
+#include <lgk/time_ms.h>
 #include <lgk/threads.h>
 
 static int thread_start_wrapper(void *arg_wrapper)

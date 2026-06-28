@@ -1,5 +1,5 @@
 #include <lgk/tnt.h>
-#include <lgk/timespec.h>
+#include <lgk/time_ms.h>
 #include <lgk/threads.h>
 
 int cnd_timedwait_ms(cnd_t *cond, mtx_t *mutex, int timeout_ms)

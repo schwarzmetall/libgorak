@@ -1,5 +1,5 @@
 #include <lgk/tnt.h>
-#include <lgk/timespec.h>
+#include <lgk/time_ms.h>
 #include <lgk/threads.h>
 
 int mtx_timedlock_ts(mtx_t *mutex, const struct timespec *ts)

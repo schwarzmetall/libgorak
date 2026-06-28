@@ -1,12 +1,12 @@
 /*
- * Tests for timespec_offset_ms and timespec_get_offset_ms (timespec_ms.c).
+ * Tests for time_ms.c.
  * Run: ctest (from build dir) or cmake --build build && ctest --test-dir build
  */
 
 #include "test.h"
 #include <time.h>
 
-#include <lgk/timespec.h>
+#include <lgk/time_ms.h>
 
 #define NSEC_PER_SEC (1000*1000*1000)
 
@@ -87,12 +87,40 @@ static void test_timespec_to_ms_sub_ms_truncates(void)
     test_assert(timespec_to_ms(&ts) == 0);
 }
 
-static void test_timespec_get_ms_success(void)
+static void test_time_ms_success(void)
 {
-    int64_t ms_before = 0;
-    int status = timespec_get_ms(TIME_UTC, &ms_before);
+    int_fast64_t ms_before = 0;
+    int status = time_ms(TIME_UTC, &ms_before);
     test_assert(!status);
     test_assert(ms_before > 0);
+}
+
+static void test_time_offset_ms_zero_offset(void)
+{
+    int_fast64_t out = 0;
+    int status = time_offset_ms(TIME_UTC, 0, &out);
+    test_assert(!status);
+    test_assert(out > 0);
+}
+
+static void test_time_offset_ms_positive_offset(void)
+{
+    int_fast64_t base = 0;
+    int_fast64_t plus5 = 0;
+    time_offset_ms(TIME_UTC, 0, &base);
+    time_offset_ms(TIME_UTC, 5000, &plus5);
+    test_assert(plus5 - base >= 5000);
+    test_assert(plus5 - base < 5050);
+}
+
+static void test_time_offset_ms_negative_offset(void)
+{
+    int_fast64_t base = 0;
+    int_fast64_t minus2 = 0;
+    time_offset_ms(TIME_UTC, 0, &base);
+    time_offset_ms(TIME_UTC, -2000, &minus2);
+    test_assert(base - minus2 >= 2000);
+    test_assert(base - minus2 < 2050);
 }
 
 int main(void)
@@ -107,6 +135,9 @@ int main(void)
     test_timespec_get_offset_ms_applies_offset();
     test_timespec_to_ms_basic();
     test_timespec_to_ms_sub_ms_truncates();
-    test_timespec_get_ms_success();
+    test_time_ms_success();
+    test_time_offset_ms_zero_offset();
+    test_time_offset_ms_positive_offset();
+    test_time_offset_ms_negative_offset();
     return 0;
 }

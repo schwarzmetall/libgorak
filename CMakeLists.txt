@@ -45,7 +45,7 @@ target_sources(libgorak PUBLIC
         include/lgk/queue_uint.h
         include/lgk/threadpool.h
         include/lgk/threads.h
-        include/lgk/timespec.h
+        include/lgk/time_ms.h
         include/lgk/tnt.h
         include/lgk/util.h)
 
@@ -78,7 +78,7 @@ target_sources(libgorak PRIVATE
     src/thrdstrerror.c
     src/thread.c
     src/threadpool.c
-    src/timespec_ms.c
+    src/time_ms.c
     src/tnt_output_level_dynamic.c
     src/tnt_strip_path.c
     src/tnt_print_stderr.c
