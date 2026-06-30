@@ -17,7 +17,7 @@
     #define ABS(x) ((x)<0 ? -(x) : (x))
 #endif
 
-#define INRANGE(v,min,max) ((v)>=min)&&((v)<=max)
+#define INRANGE(v,min,max) (((v)>=min)&&((v)<=max))
 
 #define ASIZE(a) (sizeof(a)/sizeof(a[0]))
 #define LASTINDEX(a) (ASIZE(a)-1)
