@@ -47,6 +47,7 @@ target_sources(libgorak PUBLIC
         include/lgk/threads.h
         include/lgk/time_ms.h
         include/lgk/tnt.h
+        include/lgk/crc32.h
         include/lgk/util.h)
 
 target_sources(libgorak PRIVATE
@@ -56,6 +57,9 @@ target_sources(libgorak PRIVATE
         src/tnt_strip_path.h)
 
 target_sources(libgorak PRIVATE
+    src/crc32.c
+    src/crc32_table.c
+    src/crc32_table_init.c
     src/array_fill_int.c
     src/array_find_int.c
     src/bitmap.c
