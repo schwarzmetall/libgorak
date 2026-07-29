@@ -8,6 +8,7 @@
 #include <threads.h>
 
 #include <lgk/queue_int.h>
+#include <lgk/util.h>
 
 #define QUEUE_SIZE 8192
 #define N_ITEMS    (QUEUE_SIZE << 6)
@@ -64,8 +65,47 @@ static void test_two_threads_producer_consumer(void)
     queue_int_close(&g_q);
 }
 
+static void test_trypop_trypush(void)
+{
+    static int buffer[4];
+    struct queue_int q;
+    int item = -1;
+
+    int status = queue_int_init(&q, buffer, ASIZE(buffer), 1);
+    test_assert(status == thrd_success);
+
+    /* empty queue: trypop must not block, must report thrd_busy */
+    status = queue_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
+    test_assert(status == thrd_busy);
+
+    /* fill the queue via trypush */
+    for (unsigned i = 0; i < ASIZE(buffer); i++) {
+        status = queue_int_trypush(&q, (int)i, QUEUE_TIMEOUT_MS);
+        test_assert(status == thrd_success);
+    }
+
+    /* full queue: trypush must not block, must report thrd_busy */
+    status = queue_int_trypush(&q, 42, QUEUE_TIMEOUT_MS);
+    test_assert(status == thrd_busy);
+
+    /* drain via trypop, verify FIFO order */
+    for (unsigned i = 0; i < ASIZE(buffer); i++) {
+        item = -1;
+        status = queue_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
+        test_assert(status == thrd_success);
+        test_assert(item == (int)i);
+    }
+
+    /* empty again: trypop must not block, must report thrd_busy */
+    status = queue_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
+    test_assert(status == thrd_busy);
+
+    queue_int_close(&q);
+}
+
 int main(void)
 {
     test_two_threads_producer_consumer();
+    test_trypop_trypush();
     return 0;
 }

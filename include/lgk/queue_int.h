@@ -10,5 +10,7 @@ QUEUE_INIT_PREFILLED_HEADER(int, unsigned, queue_int);
 QUEUE_CLOSE_HEADER(int, unsigned, queue_int);
 QUEUE_PUSH_HEADER(int, unsigned, queue_int);
 QUEUE_POP_HEADER(int, unsigned, queue_int);
+QUEUE_TRYPUSH_HEADER(int, unsigned, queue_int);
+QUEUE_TRYPOP_HEADER(int, unsigned, queue_int);
 
 #endif

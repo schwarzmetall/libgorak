@@ -10,5 +10,7 @@ QUEUE_INIT_PREFILLED_HEADER(void *, unsigned, queue_ptr);
 QUEUE_CLOSE_HEADER(void *, unsigned, queue_ptr);
 QUEUE_PUSH_HEADER(void *, unsigned, queue_ptr);
 QUEUE_POP_HEADER(void *, unsigned, queue_ptr);
+QUEUE_TRYPUSH_HEADER(void *, unsigned, queue_ptr);
+QUEUE_TRYPOP_HEADER(void *, unsigned, queue_ptr);
 
 #endif

@@ -13,6 +13,8 @@
 #define QUEUE_CLOSE_HEADER(type_data, type_size, name) int name##_close(struct name *q)
 #define QUEUE_PUSH_HEADER(type_data, type_size, name) int name##_push(struct name *q, type_data item, int timeout_ms)
 #define QUEUE_POP_HEADER(type_data, type_size, name) int name##_pop(struct name *q, type_data *item, int timeout_ms)
+#define QUEUE_TRYPUSH_HEADER(type_data, type_size, name) int name##_trypush(struct name *q, type_data item, int mutex_timeout_ms)
+#define QUEUE_TRYPOP_HEADER(type_data, type_size, name) int name##_trypop(struct name *q, type_data *item, int mutex_timeout_ms)
 
 #define QUEUE_STRUCT(type_data, type_size, name)\
     struct name\
@@ -111,12 +113,57 @@
             }\
             else\
             {\
+                status = thrd_error;\
                 CRIT("q->i_write==%u, q->size==%u", q->i_write, q->size);\
             }\
         }\
         else\
         {\
             if(status != thrd_timedout) CRITFT(cnd_timedwait_ts, status);\
+        }\
+        int status_unlock = mtx_unlock(&q->mutex);\
+        if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
+        return (status == thrd_success) ? status_unlock : status;\
+    trap_mtx_timedlock_ts:\
+    trap_timespec_get_offset_ms:\
+    trap_q_null:\
+        return thrd_error;\
+    }
+
+#define QUEUE_TRYPUSH(type_data, type_size, name)\
+    QUEUE_TRYPUSH_HEADER(type_data, type_size, name)\
+    {\
+        TRAPVNULL(q);\
+        int status = thrd_error;\
+        struct timespec ts;\
+        struct timespec *ts_ptr = NULL;\
+        if(mutex_timeout_ms >= 0)\
+        {\
+            status = timespec_get_offset_ms((ts_ptr=&ts), TIME_UTC, mutex_timeout_ms);\
+            TRAPF(status, timespec_get_offset_ms, status, "i");\
+        }\
+        status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
+        if(status == thrd_timedout) return status;\
+        TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
+        if(q->used < q->size)\
+        {\
+            if(q->i_write < q->size)\
+            {\
+                q->buffer[q->i_write++] = item;\
+                if(q->i_write == q->size) q->i_write = 0;\
+                q->used++;\
+                status = cnd_signal(&q->cnd_readable);\
+                if(status != thrd_success) CRITFT(cnd_signal, status);\
+            }\
+            else\
+            {\
+                status = thrd_error;\
+                CRIT("q->i_write==%u, q->size==%u", q->i_write, q->size);\
+            }\
+        }\
+        else\
+        {\
+            status = thrd_busy;\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
         if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
@@ -146,7 +193,7 @@
         while((status==thrd_success) && !q->used) status = cnd_timedwait_ts(&q->cnd_readable, &q->mutex, ts_ptr);\
         if(status == thrd_success)\
         {\
-            if(q->i_read<q->size)\
+            if(q->i_read < q->size)\
             {\
                 *item = q->buffer[q->i_read++];\
                 if(q->i_read == q->size) q->i_read = 0;\
@@ -156,12 +203,59 @@
             }\
             else\
             {\
+                status = thrd_error;\
                 CRIT("q->i_read==%u, q->size==%u", q->i_read, q->size);\
             }\
         }\
         else\
         {\
             if(status != thrd_timedout) CRITFT(cnd_timedwait_ts, status);\
+        }\
+        int status_unlock = mtx_unlock(&q->mutex);\
+        if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
+        return (status == thrd_success) ? status_unlock : status;\
+    trap_mtx_timedlock_ts:\
+    trap_timespec_get_offset_ms:\
+    trap_item_null:\
+    trap_q_null:\
+        return thrd_error;\
+    }
+
+#define QUEUE_TRYPOP(type_data, type_size, name)\
+    QUEUE_TRYPOP_HEADER(type_data, type_size, name)\
+    {\
+        TRAPVNULL(q);\
+        TRAPVNULL(item);\
+        int status = thrd_error;\
+        struct timespec ts;\
+        struct timespec *ts_ptr = NULL;\
+        if(mutex_timeout_ms >= 0)\
+        {\
+            status = timespec_get_offset_ms((ts_ptr=&ts), TIME_UTC, mutex_timeout_ms);\
+            TRAPF(status, timespec_get_offset_ms, status, "i");\
+        }\
+        status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
+        if(status == thrd_timedout) return status;\
+        TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
+        if(q->used)\
+        {\
+            if(q->i_read < q->size)\
+            {\
+                *item = q->buffer[q->i_read++];\
+                if(q->i_read == q->size) q->i_read = 0;\
+                q->used--;\
+                status = cnd_signal(&q->cnd_writable);\
+                if(status != thrd_success) CRITFT(cnd_signal, status);\
+            }\
+            else\
+            {\
+                status = thrd_error;\
+                CRIT("q->i_read==%u, q->size==%u", q->i_read, q->size);\
+            }\
+        }\
+        else\
+        {\
+            status = thrd_busy;\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
         if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
