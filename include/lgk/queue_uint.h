@@ -3,8 +3,13 @@
 
 #include <lgk/queue.h>
 
-QUEUE_STRUCT(unsigned, unsigned, queue_uint);
+RINGBUF_STRUCT(unsigned, unsigned, queue_uint_ringbuf);
+RINGBUF_INIT_HEADER(unsigned, unsigned, queue_uint_ringbuf);
+RINGBUF_INIT_PREFILLED_HEADER(unsigned, unsigned, queue_uint_ringbuf);
+RINGBUF_PUSH_HEADER(unsigned, unsigned, queue_uint_ringbuf);
+RINGBUF_POP_HEADER(unsigned, unsigned, queue_uint_ringbuf);
 
+QUEUE_STRUCT(unsigned, unsigned, queue_uint);
 QUEUE_INIT_HEADER(unsigned, unsigned, queue_uint);
 QUEUE_INIT_PREFILLED_HEADER(unsigned, unsigned, queue_uint);
 QUEUE_CLOSE_HEADER(unsigned, unsigned, queue_uint);

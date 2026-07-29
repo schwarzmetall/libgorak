@@ -43,6 +43,10 @@ target_sources(libgorak PUBLIC
         include/lgk/queue_int.h
         include/lgk/queue_ptr.h
         include/lgk/queue_uint.h
+        include/lgk/ringbuf.h
+        include/lgk/ringbuf_int.h
+        include/lgk/ringbuf_ptr.h
+        include/lgk/ringbuf_uint.h
         include/lgk/threadpool.h
         include/lgk/threads.h
         include/lgk/time_ms.h
@@ -76,10 +80,13 @@ target_sources(libgorak PRIVATE
     src/monitor.c
     src/mtx_timedlock_ms.c
     src/mtx_timedlock_ts.c
-    src/queue_int.c
-    src/queue_ptr.c
-    src/queue_uint.c
-    src/thrdstrerror.c
+        src/queue_int.c
+        src/queue_ptr.c
+        src/queue_uint.c
+        src/ringbuf_int.c
+        src/ringbuf_ptr.c
+        src/ringbuf_uint.c
+        src/thrdstrerror.c
     src/thread.c
     src/threadpool.c
     src/time_ms.c

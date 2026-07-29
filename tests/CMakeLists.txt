@@ -1,4 +1,4 @@
-set(LGK_TESTS thread fdset_input queue_int threadpool time_ms bitmap fsm)
+set(LGK_TESTS thread fdset_input queue_int ringbuf_int threadpool time_ms bitmap fsm)
 
 foreach(name IN LISTS LGK_TESTS)
     add_executable(test_${name} test_${name}.c)

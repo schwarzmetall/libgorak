@@ -7,6 +7,7 @@
 #include <lgk/tnt.h>
 #include <lgk/time_ms.h>
 #include <lgk/threads.h>
+#include <lgk/ringbuf.h>
 
 #define QUEUE_INIT_HEADER(type_data, type_size, name) int name##_init(struct name *q, type_data *buffer, type_size size, int_fast8_t timed)
 #define QUEUE_INIT_PREFILLED_HEADER(type_data, type_size, name) int name##_init_prefilled(struct name *q, type_data *buffer, type_size size, type_size used, int_fast8_t timed)
@@ -19,11 +20,7 @@
 #define QUEUE_STRUCT(type_data, type_size, name)\
     struct name\
     {\
-        type_data *buffer;\
-        type_size size;\
-        type_size used;\
-        type_size i_write;\
-        type_size i_read;\
+        struct name##_ringbuf ringbuf;\
         mtx_t mutex;\
         cnd_t cnd_readable;\
         cnd_t cnd_writable;\
@@ -33,11 +30,9 @@
     QUEUE_INIT_HEADER(type_data, type_size, name)\
     {\
         TRAPVNULL(q);\
-        TRAPVNULL(buffer);\
-        q->buffer = buffer;\
-        q->size = size;\
-        q->used = q->i_read = q->i_write = 0;\
-        int status = mtx_init(&q->mutex, timed ? mtx_timed : mtx_plain);\
+        int status = name##_ringbuf_init(&q->ringbuf, buffer, size);\
+        TRAPF(status, name##_ringbuf_init, status, "i");\
+        status = mtx_init(&q->mutex, timed ? mtx_timed : mtx_plain);\
         TRAPFT(status!=thrd_success, mtx_init, status);\
         status = cnd_init(&q->cnd_readable);\
         TRAPFTS(status!=thrd_success, cnd_init, readable, status);\
@@ -49,8 +44,7 @@
     trap_cnd_init_readable:\
         mtx_destroy(&q->mutex);\
     trap_mtx_init:\
-        return status;\
-    trap_buffer_null:\
+    trap_##name##_ringbuf_init:\
     trap_q_null:\
         return thrd_error;\
     }
@@ -59,24 +53,30 @@
     QUEUE_INIT_PREFILLED_HEADER(type_data, type_size, name)\
     {\
         TRAPVNULL(q);\
-        TRAP(used>size, used, "used > size");\
-        int status = name##_init(q, buffer, size, timed);\
-        TRAPFT(status!=thrd_success, name##_init, status);\
-        q->used = used;\
-        if(used<size) q->i_write = used;\
+        int status = name##_ringbuf_init_prefilled(&q->ringbuf, buffer, size, used);\
+        TRAPF(status, name##_ringbuf_init_prefilled, status, "i");\
+        status = mtx_init(&q->mutex, timed ? mtx_timed : mtx_plain);\
+        TRAPFT(status!=thrd_success, mtx_init, status);\
+        status = cnd_init(&q->cnd_readable);\
+        TRAPFTS(status!=thrd_success, cnd_init, readable, status);\
+        status = cnd_init(&q->cnd_writable);\
+        TRAPFTS(status!=thrd_success, cnd_init, writable, status);\
         return status;\
-    trap_##name##_init:\
-        return status;\
-    trap_used:\
+    trap_cnd_init_writable:\
+        cnd_destroy(&q->cnd_readable);\
+    trap_cnd_init_readable:\
+        mtx_destroy(&q->mutex);\
+    trap_mtx_init:\
+    trap_##name##_ringbuf_init_prefilled:\
     trap_q_null:\
         return thrd_error;\
     }
-    
+
 #define QUEUE_CLOSE(type_data, type_size, name)\
     QUEUE_CLOSE_HEADER(type_data, type_size, name)\
     {\
         TRAPVNULL(q);\
-        if(q->i_read != q->i_write) WARN("queue not empty");\
+        if(q->ringbuf.used) WARN("queue not empty");\
         cnd_destroy(&q->cnd_writable);\
         cnd_destroy(&q->cnd_readable);\
         mtx_destroy(&q->mutex);\
@@ -100,21 +100,19 @@
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
         TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
-        while((status==thrd_success) && (q->size==q->used)) status = cnd_timedwait_ts(&q->cnd_writable, &q->mutex, ts_ptr);\
+        while((status==thrd_success) && (q->ringbuf.used==q->ringbuf.size)) status = cnd_timedwait_ts(&q->cnd_writable, &q->mutex, ts_ptr);\
         if(status == thrd_success)\
         {\
-            if(q->i_write < q->size)\
+            int status_rb = name##_ringbuf_push(&q->ringbuf, item);\
+            if(!status_rb)\
             {\
-                q->buffer[q->i_write++] = item;\
-                if(q->i_write == q->size) q->i_write = 0;\
-                q->used++;\
                 status = cnd_signal(&q->cnd_readable);\
                 if(status != thrd_success) CRITFT(cnd_signal, status);\
             }\
             else\
             {\
                 status = thrd_error;\
-                CRIT("q->i_write==%u, q->size==%u", q->i_write, q->size);\
+                CRITF(name##_ringbuf_push, status_rb, "i");\
             }\
         }\
         else\
@@ -145,25 +143,23 @@
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
         TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
-        if(q->used < q->size)\
+        int status_rb = name##_ringbuf_push(&q->ringbuf, item);\
+        if(!status_rb)\
         {\
-            if(q->i_write < q->size)\
+            status = cnd_signal(&q->cnd_readable);\
+            if(status != thrd_success) CRITFT(cnd_signal, status);\
+        }\
+        else\
+        {\
+            if(status_rb > 0)\
             {\
-                q->buffer[q->i_write++] = item;\
-                if(q->i_write == q->size) q->i_write = 0;\
-                q->used++;\
-                status = cnd_signal(&q->cnd_readable);\
-                if(status != thrd_success) CRITFT(cnd_signal, status);\
+                status = thrd_busy;\
             }\
             else\
             {\
                 status = thrd_error;\
-                CRIT("q->i_write==%u, q->size==%u", q->i_write, q->size);\
+                CRITF(name##_ringbuf_push, status_rb, "i");\
             }\
-        }\
-        else\
-        {\
-            status = thrd_busy;\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
         if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
@@ -190,21 +186,19 @@
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
         TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
-        while((status==thrd_success) && !q->used) status = cnd_timedwait_ts(&q->cnd_readable, &q->mutex, ts_ptr);\
+        while((status==thrd_success) && !q->ringbuf.used) status = cnd_timedwait_ts(&q->cnd_readable, &q->mutex, ts_ptr);\
         if(status == thrd_success)\
         {\
-            if(q->i_read < q->size)\
+            int status_rb = name##_ringbuf_pop(&q->ringbuf, item);\
+            if(!status_rb)\
             {\
-                *item = q->buffer[q->i_read++];\
-                if(q->i_read == q->size) q->i_read = 0;\
-                q->used--;\
                 status = cnd_signal(&q->cnd_writable);\
                 if(status != thrd_success) CRITFT(cnd_signal, status);\
             }\
             else\
             {\
                 status = thrd_error;\
-                CRIT("q->i_read==%u, q->size==%u", q->i_read, q->size);\
+                CRITF(name##_ringbuf_pop, status_rb, "i");\
             }\
         }\
         else\
@@ -237,25 +231,23 @@
         status = mtx_timedlock_ts(&q->mutex, ts_ptr);\
         if(status == thrd_timedout) return status;\
         TRAPFT(status!=thrd_success, mtx_timedlock_ts, status);\
-        if(q->used)\
+        int status_rb = name##_ringbuf_pop(&q->ringbuf, item);\
+        if(!status_rb)\
         {\
-            if(q->i_read < q->size)\
+            status = cnd_signal(&q->cnd_writable);\
+            if(status != thrd_success) CRITFT(cnd_signal, status);\
+        }\
+        else\
+        {\
+            if(status_rb > 0)\
             {\
-                *item = q->buffer[q->i_read++];\
-                if(q->i_read == q->size) q->i_read = 0;\
-                q->used--;\
-                status = cnd_signal(&q->cnd_writable);\
-                if(status != thrd_success) CRITFT(cnd_signal, status);\
+                status = thrd_busy;\
             }\
             else\
             {\
                 status = thrd_error;\
-                CRIT("q->i_read==%u, q->size==%u", q->i_read, q->size);\
+                CRITF(name##_ringbuf_pop, status_rb, "i");\
             }\
-        }\
-        else\
-        {\
-            status = thrd_busy;\
         }\
         int status_unlock = mtx_unlock(&q->mutex);\
         if(status_unlock != thrd_success) CRITFT(mtx_unlock, status_unlock);\
