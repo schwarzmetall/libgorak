@@ -20,7 +20,7 @@ static int worker_thread_function(void *data)
         if(i_work < 0) break;
         struct threadpool_work *work = tp->work_buffer + i_work;
         work->done_callback(work->data, work->start(work->data));
-        status = queue_int_push(&tp->work_pool, i_work, tp->queue_timeout_ms);
+        status = queue_int_push(&tp->work_pool, &i_work, tp->queue_timeout_ms);
         TRAPFT(status!=thrd_success, queue_int_push, status);
     }
     return status;
@@ -35,7 +35,7 @@ static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_
     int status = thrd_success;
     for(unsigned i = 0; i < n_threads; i++)
     {
-        int status_push = queue_int_push(&tp->work_queue, -1, tp->queue_timeout_ms);
+        int status_push = queue_int_push(&tp->work_queue, &(int){-1}, tp->queue_timeout_ms);
         if(status_push != thrd_success)
         {
             if(status == thrd_success) status = status_push;
@@ -140,13 +140,13 @@ int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpo
     work->start = start;
     work->done_callback = work_done_cb;
     work->data = work_data;
-    status = queue_int_push(&tp->work_queue, i_work, tp->queue_timeout_ms);
+    status = queue_int_push(&tp->work_queue, &i_work, tp->queue_timeout_ms);
     TRAPFT(status!=thrd_success, queue_int_push, status);
     return thrd_success;
 trap_i_work_out_of_bounds:
     status = thrd_error;
 trap_queue_int_push:
-    int status_push_pool = queue_int_push(&tp->work_pool, i_work, tp->queue_timeout_ms);
+    int status_push_pool = queue_int_push(&tp->work_pool, &i_work, tp->queue_timeout_ms);
     if(status_push_pool != thrd_success) CRITFT(queue_int_push, status_push_pool);
 trap_queue_int_pop:
     return status;

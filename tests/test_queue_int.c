@@ -21,9 +21,8 @@ static int producer_thread(void *arg)
 {
     (void)arg;
     for (int i = 0; i < N_ITEMS; i++) {
-        int status = queue_int_push(&g_q, i, QUEUE_TIMEOUT_MS);
-        if (status != thrd_success)
-            return -1;
+        int status = queue_int_push(&g_q, &i, QUEUE_TIMEOUT_MS);
+        if (status != thrd_success) return -1;
     }
     return 0;
 }
@@ -79,13 +78,13 @@ static void test_trypop_trypush(void)
     test_assert(status == thrd_busy);
 
     /* fill the queue via trypush */
-    for (unsigned i = 0; i < ASIZE(buffer); i++) {
-        status = queue_int_trypush(&q, (int)i, QUEUE_TIMEOUT_MS);
+    for (int i = 0; i < (int)ASIZE(buffer); i++) {
+        status = queue_int_trypush(&q, &i, QUEUE_TIMEOUT_MS);
         test_assert(status == thrd_success);
     }
 
     /* full queue: trypush must not block, must report thrd_busy */
-    status = queue_int_trypush(&q, 42, QUEUE_TIMEOUT_MS);
+    status = queue_int_trypush(&q, &(int){42}, QUEUE_TIMEOUT_MS);
     test_assert(status == thrd_busy);
 
     /* drain via trypop, verify FIFO order */

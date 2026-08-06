@@ -32,14 +32,14 @@ static void test_push_pop_and_wraparound(void)
     test_assert(status == 1);
 
     /* fill via push */
-    for (unsigned i = 0; i < ASIZE(buffer); i++) {
-        status = ringbuf_int_push(&rb, (int)i);
+    for (int i = 0; i < (int)ASIZE(buffer); i++) {
+        status = ringbuf_int_push(&rb, &i);
         test_assert(status == 0);
     }
     test_assert(rb.used == ASIZE(buffer));
 
     /* full: push must report "full" (1) */
-    status = ringbuf_int_push(&rb, 42);
+    status = ringbuf_int_push(&rb, &(int){42});
     test_assert(status == 1);
 
     /* drain, verify FIFO order */
@@ -56,8 +56,8 @@ static void test_push_pop_and_wraparound(void)
     test_assert(status == 1);
 
     /* exercise wraparound with repeated single-item push/pop */
-    for (unsigned i = 0; i < ASIZE(buffer) * 3; i++) {
-        status = ringbuf_int_push(&rb, (int)i);
+    for (int i = 0; i < (int)ASIZE(buffer) * 3; i++) {
+        status = ringbuf_int_push(&rb, &i);
         test_assert(status == 0);
         item = -1;
         status = ringbuf_int_pop(&rb, &item);
@@ -110,8 +110,8 @@ static void test_write_read_wraparound(void)
     test_assert(status == 0);
 
     /* push two items, pop two items, to move i_write/i_read to index 2 */
-    test_assert(ringbuf_int_push(&rb, 1) == 0);
-    test_assert(ringbuf_int_push(&rb, 2) == 0);
+    test_assert(ringbuf_int_push(&rb, &(int){1}) == 0);
+    test_assert(ringbuf_int_push(&rb, &(int){2}) == 0);
     test_assert(ringbuf_int_pop(&rb, &item) == 0 && item == 1);
     test_assert(ringbuf_int_pop(&rb, &item) == 0 && item == 2);
     test_assert(rb.used == 0);

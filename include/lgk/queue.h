@@ -12,9 +12,9 @@
 #define QUEUE_INIT_HEADER(type_data, type_size, name) int name##_init(struct name *q, type_data *buffer, type_size size, int_fast8_t timed)
 #define QUEUE_INIT_PREFILLED_HEADER(type_data, type_size, name) int name##_init_prefilled(struct name *q, type_data *buffer, type_size size, type_size used, int_fast8_t timed)
 #define QUEUE_CLOSE_HEADER(type_data, type_size, name) int name##_close(struct name *q)
-#define QUEUE_PUSH_HEADER(type_data, type_size, name) int name##_push(struct name *q, type_data item, int timeout_ms)
+#define QUEUE_PUSH_HEADER(type_data, type_size, name) int name##_push(struct name *q, const type_data *item, int timeout_ms)
 #define QUEUE_POP_HEADER(type_data, type_size, name) int name##_pop(struct name *q, type_data *item, int timeout_ms)
-#define QUEUE_TRYPUSH_HEADER(type_data, type_size, name) int name##_trypush(struct name *q, type_data item, int mutex_timeout_ms)
+#define QUEUE_TRYPUSH_HEADER(type_data, type_size, name) int name##_trypush(struct name *q, const type_data *item, int mutex_timeout_ms)
 #define QUEUE_TRYPOP_HEADER(type_data, type_size, name) int name##_trypop(struct name *q, type_data *item, int mutex_timeout_ms)
 
 #define QUEUE_STRUCT(type_data, type_size, name)\
