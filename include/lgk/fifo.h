@@ -1,10 +1,10 @@
-#ifndef LGK_RINGBUF_H
-#define LGK_RINGBUF_H
+#ifndef LGK_FIFO_H
+#define LGK_FIFO_H
 
 #include <string.h>
 #include <lgk/tnt.h>
 
-#define RINGBUF_STRUCT(type_data, type_size, name)\
+#define FIFO_STRUCT(name, type_data, type_size)\
     struct name\
     {\
         type_data *buffer;\
@@ -14,8 +14,9 @@
         type_size i_read;\
     }
 
-#define RINGBUF_INIT_HEADER(type_data, type_size, name) int name##_init(struct name *rb, type_data *buffer, type_size size)
-#define RINGBUF_INIT(type_data, type_size, name) RINGBUF_INIT_HEADER(type_data, type_size, name)\
+#define FIFO_INIT_HEADER(name) int name##_init(struct name *rb, typeof(rb->buffer) buffer, typeof(rb->size) size)
+#define FIFO_INIT(name)\
+    FIFO_INIT_HEADER(name)\
     {\
         TRAPVNULL(rb);\
         rb->buffer = buffer;\
@@ -26,8 +27,9 @@
         return -1;\
     }
 
-#define RINGBUF_INIT_PREFILLED_HEADER(type_data, type_size, name) int name##_init_prefilled(struct name *rb, type_data *buffer, type_size size, type_size used)
-#define RINGBUF_INIT_PREFILLED(type_data, type_size, name) RINGBUF_INIT_PREFILLED_HEADER(type_data, type_size, name)\
+#define FIFO_INIT_PREFILLED_HEADER(name) int name##_init_prefilled(struct name *rb, typeof(rb->buffer) buffer, typeof(rb->size) size, typeof(rb->used) used)
+#define FIFO_INIT_PREFILLED(name)\
+    FIFO_INIT_PREFILLED_HEADER(name)\
     {\
         TRAPVNULL(rb);\
         TRAP(used>size, used, "used > size");\
@@ -43,8 +45,9 @@
         return -1;\
     }
 
-#define RINGBUF_PUSH_HEADER(type_data, type_size, name) int name##_push(struct name *rb, const type_data *item)
-#define RINGBUF_PUSH(type_data, type_size, name) RINGBUF_PUSH_HEADER(type_data, type_size, name)\
+#define FIFO_PUSH_HEADER(name) int name##_push(struct name *rb, const typeof(*rb->buffer) *restrict item)
+#define FIFO_PUSH(name)\
+    FIFO_PUSH_HEADER(name)\
     {\
         TRAPVNULL(rb);\
         if(rb->used == rb->size) return 1;\
@@ -60,8 +63,9 @@
         return -1;\
     }
 
-#define RINGBUF_POP_HEADER(type_data, type_size, name) int name##_pop(struct name *rb, type_data *item)
-#define RINGBUF_POP(type_data, type_size, name) RINGBUF_POP_HEADER(type_data, type_size, name)\
+#define FIFO_POP_HEADER(name) int name##_pop(struct name *rb, typeof(*rb->buffer) *item)
+#define FIFO_POP(name)\
+    FIFO_POP_HEADER(name)\
     {\
         TRAPVNULL(rb);\
         TRAPVNULL(item);\
@@ -84,20 +88,21 @@
  * INT_MAX, this cast silently truncates/wraps. Unlikely in practice (queue/ring buffer sizes
  * are not expected to approach INT_MAX items), but worth revisiting if `type_size` is ever
  * instantiated with a wide type or very large capacities. */
-#define RINGBUF_WRITE_HEADER(type_data, type_size, name) int name##_write(struct name *rb, type_data *items, type_size count)
-#define RINGBUF_WRITE(type_data, type_size, name) RINGBUF_WRITE_HEADER(type_data, type_size, name)\
+#define FIFO_WRITE_HEADER(name) int name##_write(struct name *rb, const typeof(*rb->buffer) *items, typeof(rb->size) count)
+#define FIFO_WRITE(name)\
+    FIFO_WRITE_HEADER(name)\
     {\
         if(!count) return 0;\
         TRAPVNULL(rb);\
         TRAPVNULL(items);\
         TRAPXNULL(rb->buffer, buffer);\
-        type_size available = rb->size - rb->used;\
-        type_size n = (count < available) ? count : available;\
-        type_size to_end = rb->size - rb->i_write;\
-        type_size first = (n < to_end) ? n : to_end;\
-        memcpy(&rb->buffer[rb->i_write], items, first * sizeof(type_data));\
-        type_size second = n - first;\
-        if(second) memcpy(rb->buffer, items + first, second * sizeof(type_data));\
+        typeof(rb->size) available = rb->size - rb->used;\
+        typeof(rb->size) n = (count < available) ? count : available;\
+        typeof(rb->size) to_end = rb->size - rb->i_write;\
+        typeof(rb->size) first = (n < to_end) ? n : to_end;\
+        memcpy(&rb->buffer[rb->i_write], items, first * sizeof(*rb->buffer));\
+        typeof(rb->size) second = n - first;\
+        if(second) memcpy(rb->buffer, items + first, second * sizeof(*rb->buffer));\
         rb->i_write += n;\
         if(rb->i_write >= rb->size) rb->i_write -= rb->size;\
         rb->used += n;\
@@ -108,21 +113,22 @@
         return -1;\
     }
 
-/* TODO: same caveat as RINGBUF_WRITE - `(int)n` can silently truncate/wrap if `type_size`
+/* TODO: same caveat as FIFO_WRITE - `(int)n` can silently truncate/wrap if `type_size`
  * is wide enough and `count`/`used` exceeds INT_MAX. Unlikely, but worth revisiting. */
-#define RINGBUF_READ_HEADER(type_data, type_size, name) int name##_read(struct name *rb, type_data *items, type_size count)
-#define RINGBUF_READ(type_data, type_size, name) RINGBUF_READ_HEADER(type_data, type_size, name)\
+#define FIFO_READ_HEADER(name) int name##_read(struct name *rb, typeof(*rb->buffer) *items, typeof(rb->size) count)
+#define FIFO_READ(name)\
+    FIFO_READ_HEADER(name)\
     {\
         if(!count) return 0;\
         TRAPVNULL(rb);\
         TRAPVNULL(items);\
         TRAPXNULL(rb->buffer, buffer);\
-        type_size n = (count < rb->used) ? count : rb->used;\
-        type_size to_end = rb->size - rb->i_read;\
-        type_size first = (n < to_end) ? n : to_end;\
-        memcpy(items, &rb->buffer[rb->i_read], first * sizeof(type_data));\
-        type_size second = n - first;\
-        if(second) memcpy(items + first, rb->buffer, second * sizeof(type_data));\
+        typeof(rb->size) n = (count < rb->used) ? count : rb->used;\
+        typeof(rb->size) to_end = rb->size - rb->i_read;\
+        typeof(rb->size) first = (n < to_end) ? n : to_end;\
+        memcpy(items, &rb->buffer[rb->i_read], first * sizeof(*rb->buffer));\
+        typeof(rb->size) second = n - first;\
+        if(second) memcpy(items + first, rb->buffer, second * sizeof(*rb->buffer));\
         rb->i_read += n;\
         if(rb->i_read >= rb->size) rb->i_read -= rb->size;\
         rb->used -= n;\

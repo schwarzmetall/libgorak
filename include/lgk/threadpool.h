@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <threads.h>
 #include <lgk/threads.h>
-#include <lgk/queue_int.h>
+#include <lgk/fifoq_int.h>
 
 #define THREADPOOL_STATIC(name, n_threads, pool_size)\
     struct threadpool name = {};\
@@ -37,8 +37,8 @@ struct threadpool
     struct lgk_monitor monitor;
     struct lgk_thread *thread_buffer;
     struct threadpool_work *work_buffer;
-    struct queue_int work_queue;
-    struct queue_int work_pool;
+    struct fifoq_int work_queue;
+    struct fifoq_int work_pool;
     int queue_timeout_ms;
 };
 

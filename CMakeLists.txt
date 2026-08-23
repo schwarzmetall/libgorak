@@ -39,14 +39,23 @@ target_sources(libgorak PUBLIC
         include/lgk/fd.h
         include/lgk/fdset_input.h
         include/lgk/fsm.h
+        include/lgk/fifo.h
+        include/lgk/fifo_int.h
+        include/lgk/fifo_ptr.h
+        include/lgk/fifo_uint.h
+        include/lgk/heap.h
+        include/lgk/heap_int_min.h
+        include/lgk/heap_int_max.h
+        include/lgk/heap_uint_min.h
+        include/lgk/heap_uint_max.h
         include/lgk/queue.h
-        include/lgk/queue_int.h
-        include/lgk/queue_ptr.h
-        include/lgk/queue_uint.h
-        include/lgk/ringbuf.h
-        include/lgk/ringbuf_int.h
-        include/lgk/ringbuf_ptr.h
-        include/lgk/ringbuf_uint.h
+        include/lgk/fifoq_int.h
+        include/lgk/fifoq_ptr.h
+        include/lgk/fifoq_uint.h
+        include/lgk/prioq_int_min.h
+        include/lgk/prioq_int_max.h
+        include/lgk/prioq_uint_min.h
+        include/lgk/prioq_uint_max.h
         include/lgk/threadpool.h
         include/lgk/threads.h
         include/lgk/time_ms.h
@@ -80,13 +89,21 @@ target_sources(libgorak PRIVATE
     src/monitor.c
     src/mtx_timedlock_ms.c
     src/mtx_timedlock_ts.c
-        src/queue_int.c
-        src/queue_ptr.c
-        src/queue_uint.c
-        src/ringbuf_int.c
-        src/ringbuf_ptr.c
-        src/ringbuf_uint.c
-        src/thrdstrerror.c
+    src/fifo_int.c
+    src/fifo_ptr.c
+    src/fifo_uint.c
+    src/heap_int_min.c
+    src/heap_int_max.c
+    src/heap_uint_min.c
+    src/heap_uint_max.c
+    src/fifoq_int.c
+    src/fifoq_uint.c
+    src/fifoq_ptr.c
+    src/prioq_int_min.c
+    src/prioq_int_max.c
+    src/prioq_uint_min.c
+    src/prioq_uint_max.c
+    src/thrdstrerror.c
     src/thread.c
     src/threadpool.c
     src/time_ms.c

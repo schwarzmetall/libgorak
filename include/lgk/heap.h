@@ -2,6 +2,7 @@
 #define LGK_HEAP_H
 
 #include <stdint.h>
+#include <lgk/util.h>
 #include <lgk/tnt.h>
 
 #define HEAP_PARENT(i) (((i)-1)>>1)
@@ -16,72 +17,73 @@
         type_size used;\
     }
 
-// compare function has to be provided by the user as [[unsequenced]] name##_compare(const type_data *restrict a, const type_data *restrict b)
+// compare function has to be provided by the user as [[unsequenced]] int_fast8_t name##_compare(const type_data *restrict a, const type_data *restrict b)
 //
 // return value semantics:   < 0 -> node a's level (distance from root) is LESS THAN b's
 //                           > 0 -> node a's level (distance from root) is GREATER THAN b's
 //                           ==0 -> equal
-// example for an int-typed min-heap: 
-//  [[unsequenced]] example_int_heap_compare(const type_data *int a, const int *restrict b)
+// example for an int-typed min-heap:
+//  static int_fast8_t example_int_heap_compare(const int *restrict a, const int *restrict b) [[unsequenced]]
 //  {
-//      return *a - *b;
+//      return (*a >= *b) - (*a <= *b);
 //  }
 
-#define HEAP_SWAP_HEADER(name, type_data, type_index) void name##_swap(type_data *restrict buffer, type_index i_a, type_index i_b)
-#define HEAP_SWAP(name, type_data, type_index)\
-    HEAP_SWAP_HEADER(name, type_data, type_index)\
+#define HEAP_SWAP_HEADER(name) void name##_swap(STYPEOF_DEREF(name, buffer) *restrict buffer, STYPEOF(name, size) i_a, STYPEOF(name, size) i_b)
+#define HEAP_SWAP(name)\
+    HEAP_SWAP_HEADER(name)\
     {\
-        const type_data temp = buffer[i_a];\
-        buffer[i_a] = base[i_b];\
+        const typeof(*buffer) temp = buffer[i_a];\
+        buffer[i_a] = buffer[i_b];\
         buffer[i_b] = temp;\
     }
 
-#define HEAP_UPHEAP_HEADER(name, type_data, type_size) void name##_upheap(type_data *restrict buffer, type_size i)
-#define HEAP_UPHEAP(name, type_data, type_size)\
-    HEAP_UPHEAP_HEADER(name, type_data, type_size)\
+#define HEAP_UPHEAP_HEADER(name) void name##_upheap(STYPEOF_DEREF(name, buffer) *restrict buffer, STYPEOF(name, size) i)
+#define HEAP_UPHEAP(name)\
+    HEAP_UPHEAP_HEADER(name)\
     {\
         while(i)\
         {\
-            type_size parent = HEAP_PARENT(i);\
+            STYPEOF(name, size) parent = HEAP_PARENT(i);\
             if(name##_compare(buffer+i, buffer+parent) >= 0) break;\
             name##_swap(buffer, i, parent);\
             i = parent;\
         }\
     }
 
-#define HEAP_DOWNHEAP_HEADER(name, type_data, type_size) void name##_upheap(type_data *restrict buffer, type_size used)
-#define HEAP_DOWNHEAP(name, type_data, type_size)\
-    HEAP_DOWNHEAP_HEADER(name, type_data, type_size)\
+#define HEAP_DOWNHEAP_HEADER(name) void name##_downheap(STYPEOF_DEREF(name, buffer) *restrict buffer, STYPEOF(name, size) used)
+#define HEAP_DOWNHEAP(name)\
+    HEAP_DOWNHEAP_HEADER(name)\
     {\
-        type_size parent = 0;\
-        for(type_size parent=0, lchild=lchild(0), rchild=rchild(0); lchild<used ; lchild=HEAP_LCHILD(parent), rchild=HEAP_RCHILD(parent))\
+        for(STYPEOF(name, size) parent=0, lchild=HEAP_LCHILD(0), rchild=HEAP_RCHILD(0); lchild<used ; lchild=HEAP_LCHILD(parent), rchild=HEAP_RCHILD(parent))\
         {\
-            type_size child = (rchild<used) ? ((name##_compare(buffer+lchild, buffer+rchild) < 0) ? lchild : rchild) : lchild;\
-            if(name##_compare(buffer+parent, buffer+child) <=0) break;\
+            STYPEOF(name, size) child = (rchild<used) ? ((name##_compare(buffer+lchild, buffer+rchild) < 0) ? lchild : rchild) : lchild;\
+            if(name##_compare(buffer+parent, buffer+child) <= 0) break;\
             name##_swap(buffer, parent, child);\
             parent = child;\
         }\
     }
 
-#define HEAP_HELPERS_STATIC(name, type_data, type_size)\
-    static HEAP_HEAP_SWAP(name, type_data, type_size)\
-    static HEAP_UPHEAP(name, type_data, type_size)\
-    static HEAP_DOWNHEAP(name, type_data, type_size)
+#define HEAP_HELPERS_STATIC(name)\
+    static HEAP_SWAP(name)\
+    static HEAP_UPHEAP(name)\
+    static HEAP_DOWNHEAP(name)
 
-#define HEAP_INIT_HEADER(name, type_data, type_size) int_fast8_t name##_init(struct name *heap, type_data *buffer, type_size size)
-#define HEAP_INIT(name, type_data, type_size) HEAP_INIT_HEADER(name, type_data, type_size)\
+#define HEAP_INIT_HEADER(name) int_fast8_t name##_init(struct name *heap, typeof(heap->buffer) buffer, typeof(heap->size) size)
+#define HEAP_INIT(name)\
+    HEAP_INIT_HEADER(name)\
     {\
         TRAPVNULL(heap);\
         heap->buffer = buffer;\
         heap->size = size;\
-        heap->used = used;\
+        heap->used = 0;\
         return 0;\
     trap_heap_null:\
         return -1;\
     }
 
-#define HEAP_PUSH_HEADER(name, type_data, type_size) int_fast8_t name##_push(struct name *heap, type_data *restrict item)
-#define HEAP_PUSH(name, type_data, type_size) HEAP_PUSH_HEADER(name, type_data, type_size)\
+#define HEAP_PUSH_HEADER(name) int_fast8_t name##_push(struct name *heap, const typeof(*heap->buffer) *restrict item)
+#define HEAP_PUSH(name)\
+    HEAP_PUSH_HEADER(name)\
     {\
         TRAPVNULL(heap);\
         TRAPXNULL(heap->buffer, buffer);\
@@ -95,8 +97,9 @@
         return -1;\
     }
 
-#define HEAP_POP_HEADER(name, type_data, type_size) int_fast8_t name##_pop(struct name *heap, type_data *restrict item)
-#define HEAP_POP(name, type_data, type_size) HEAP_POP_HEADER(name, type_data, type_size)\
+#define HEAP_POP_HEADER(name) int_fast8_t name##_pop(struct name *heap, typeof(*heap->buffer) *restrict item)
+#define HEAP_POP(name)\
+    HEAP_POP_HEADER(name)\
     {\
         TRAPVNULL(heap);\
         if(!heap->used) return 1;\
@@ -112,8 +115,9 @@
         return -1;\
     }
 
-#define HEAP_PEEK_HEADER(name, type_data) const type_data *name##_peek(const struct name *heap)
-#define HEAP_PEEK(name, type_data) HEAP_PEEK_HEADER(name, type_data)\
+#define HEAP_PEEK_HEADER(name) const STYPEOF_DEREF(name, buffer) *name##_peek(const struct name *heap)
+#define HEAP_PEEK(name)\
+    HEAP_PEEK_HEADER(name)\
     {\
         TRAPVNULL(heap);\
         if(!heap->used) return NULL;\
@@ -122,8 +126,9 @@
         return NULL;\
     }
 
-#define HEAP_PUSHPOP_HEADER(name, type_data, type_size) int_fast8_t name##_pushpop(struct name *heap, const type_data *restrict item_in, type_data *restrict item_out)
-#define HEAP_PUSHPOP(name, type_data, type_size) HEAP_PUSHPOP_HEADER(name, type_data, type_size)\
+#define HEAP_PUSHPOP_HEADER(name) int_fast8_t name##_pushpop(struct name *heap, const typeof(*heap->buffer) *restrict item_in, typeof(*heap->buffer) *restrict item_out)
+#define HEAP_PUSHPOP(name)\
+    HEAP_PUSHPOP_HEADER(name)\
     {\
         TRAPVNULL(heap);\
         TRAPVNULL(item_in);\

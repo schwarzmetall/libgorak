@@ -29,7 +29,9 @@
 
 #define ASSERT_SIGNED(type) static_assert(((type)-1)<0)
 
-#define SIZEOFSM(type, member) sizeof(((type *)0)->member)
+#define SSIZEOF(structname, member) sizeof((struct structname){}.member)
+#define STYPEOF(structname, member) typeof((struct structname){}.member)
+#define STYPEOF_DEREF(structname, member) typeof(*(struct structname){}.member)
 
 unsigned digits(unsigned value, unsigned base);
 

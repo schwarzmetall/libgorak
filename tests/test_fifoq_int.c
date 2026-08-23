@@ -1,5 +1,5 @@
 /*
- * Two-thread test for queue_int: one producer, one consumer.
+ * Two-thread test for fifoq_int: one producer, one consumer.
  * Run: ctest (from build dir).
  */
 
@@ -7,21 +7,21 @@
 #include <stdint.h>
 #include <threads.h>
 
-#include <lgk/queue_int.h>
+#include <lgk/fifoq_int.h>
 #include <lgk/util.h>
 
 #define QUEUE_SIZE 8192
 #define N_ITEMS    (QUEUE_SIZE << 6)
 #define QUEUE_TIMEOUT_MS 5000
 
-static struct queue_int g_q;
+static struct fifoq_int g_q;
 static int g_buffer[QUEUE_SIZE];
 
 static int producer_thread(void *arg)
 {
     (void)arg;
     for (int i = 0; i < N_ITEMS; i++) {
-        int status = queue_int_push(&g_q, &i, QUEUE_TIMEOUT_MS);
+        int status = fifoq_int_push(&g_q, &i, QUEUE_TIMEOUT_MS);
         if (status != thrd_success) return -1;
     }
     return 0;
@@ -32,7 +32,7 @@ static int consumer_thread(void *arg)
     int *collected = arg;
     for (int i = 0; i < N_ITEMS; i++) {
         int item;
-        int status = queue_int_pop(&g_q, &item, QUEUE_TIMEOUT_MS);
+        int status = fifoq_int_pop(&g_q, &item, QUEUE_TIMEOUT_MS);
         if (status != thrd_success)
             return -1;
         collected[i] = item;
@@ -46,7 +46,7 @@ static void test_two_threads_producer_consumer(void)
     thrd_t prod, cons;
     int res_prod, res_cons;
 
-    int status = queue_int_init(&g_q, g_buffer, QUEUE_SIZE, 1);
+    int status = fifoq_int_init(&g_q, g_buffer, QUEUE_SIZE, 1);
     test_assert(status == thrd_success);
 
     test_assert(thrd_create(&prod, producer_thread, NULL) == thrd_success);
@@ -61,45 +61,45 @@ static void test_two_threads_producer_consumer(void)
     for (int i = 0; i < N_ITEMS; i++)
         test_assert(collected[i] == i);
 
-    queue_int_close(&g_q);
+    fifoq_int_close(&g_q);
 }
 
 static void test_trypop_trypush(void)
 {
     static int buffer[4];
-    struct queue_int q;
+    struct fifoq_int q;
     int item = -1;
 
-    int status = queue_int_init(&q, buffer, ASIZE(buffer), 1);
+    int status = fifoq_int_init(&q, buffer, ASIZE(buffer), 1);
     test_assert(status == thrd_success);
 
     /* empty queue: trypop must not block, must report thrd_busy */
-    status = queue_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
+    status = fifoq_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
     test_assert(status == thrd_busy);
 
     /* fill the queue via trypush */
     for (int i = 0; i < (int)ASIZE(buffer); i++) {
-        status = queue_int_trypush(&q, &i, QUEUE_TIMEOUT_MS);
+        status = fifoq_int_trypush(&q, &i, QUEUE_TIMEOUT_MS);
         test_assert(status == thrd_success);
     }
 
     /* full queue: trypush must not block, must report thrd_busy */
-    status = queue_int_trypush(&q, &(int){42}, QUEUE_TIMEOUT_MS);
+    status = fifoq_int_trypush(&q, &(int){42}, QUEUE_TIMEOUT_MS);
     test_assert(status == thrd_busy);
 
     /* drain via trypop, verify FIFO order */
     for (unsigned i = 0; i < ASIZE(buffer); i++) {
         item = -1;
-        status = queue_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
+        status = fifoq_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
         test_assert(status == thrd_success);
         test_assert(item == (int)i);
     }
 
     /* empty again: trypop must not block, must report thrd_busy */
-    status = queue_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
+    status = fifoq_int_trypop(&q, &item, QUEUE_TIMEOUT_MS);
     test_assert(status == thrd_busy);
 
-    queue_int_close(&q);
+    fifoq_int_close(&q);
 }
 
 int main(void)
