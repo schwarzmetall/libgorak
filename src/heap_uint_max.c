@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <lgk/heap.h>
 #include <lgk/heap_uint_max.h>
 

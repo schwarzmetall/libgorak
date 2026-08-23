@@ -17,7 +17,7 @@
         type_size used;\
     }
 
-// compare function has to be provided by the user as [[unsequenced]] int_fast8_t name##_compare(const type_data *restrict a, const type_data *restrict b)
+// compare function has to be provided by the user as <signed int type> name##_compare(const type_data *restrict a, const type_data *restrict b)
 //
 // return value semantics:   < 0 -> node a's level (distance from root) is LESS THAN b's
 //                           > 0 -> node a's level (distance from root) is GREATER THAN b's
@@ -87,10 +87,11 @@
     {\
         TRAPVNULL(heap);\
         TRAPXNULL(heap->buffer, buffer);\
-        if(heap->used>=heap->size) return 1;\
+        if(heap->used >= heap->size) return 1;\
         TRAPVNULL(item);\
-        heap->buffer[heap->used++] = *item;\
-        name##_upheap(heap->buffer, heap->used);\
+        heap->buffer[heap->used] = *item;\
+        name##_upheap(heap->buffer, heap->used++);\
+        return 0;\
     trap_item_null:\
     trap_buffer_null:\
     trap_heap_null:\
@@ -106,7 +107,7 @@
         TRAPXNULL(heap->buffer, buffer);\
         TRAPVNULL(item);\
         *item = heap->buffer[0];\
-        heap->buffer[0] = heap->buffer[heap->used--];\
+        heap->buffer[0] = heap->buffer[--heap->used];\
         name##_downheap(heap->buffer, heap->used);\
         return 0;\
     trap_item_null:\

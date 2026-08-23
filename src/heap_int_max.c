@@ -1,7 +1,8 @@
+#include <stdint.h>
 #include <lgk/heap.h>
 #include <lgk/heap_int_max.h>
 
-static int heap_int_max_compare(const int *restrict a, const int *restrict b) [[unsequenced]]
+static int_fast8_t heap_int_max_compare(const int *restrict a, const int *restrict b) [[unsequenced]]
 {
     return (*a <= *b) - (*a >= *b);
 }
