@@ -33,6 +33,8 @@ target_sources(libgorak PUBLIC
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
     FILES
         include/lgk/array.h
+        include/lgk/atomic_bitmap.h
+        include/lgk/atomic_widest_lockfree.h
         include/lgk/bitmap.h
         include/lgk/char.h
         include/lgk/date.h
@@ -75,7 +77,6 @@ target_sources(libgorak PRIVATE
     src/crc32_table_init.c
     src/array_fill_int.c
     src/array_find_int.c
-    src/bitmap.c
     src/char.c
     src/cnd_timedwait_ms.c
     src/cnd_timedwait_ts.c
