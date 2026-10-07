@@ -140,7 +140,7 @@
             if(name##_compare(item_in, heap->buffer) > 0)\
             {\
                 *item_out = heap->buffer[0];\
-                *heap->buffer[0] = *item_in;\
+                heap->buffer[0] = *item_in;\
                 name##_downheap(heap->buffer, heap->used);\
                 return 0;\
             }\

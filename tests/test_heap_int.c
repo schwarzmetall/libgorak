@@ -7,9 +7,36 @@
 
 #include <lgk/heap_int_min.h>
 #include <lgk/heap_int_max.h>
+#include <lgk/heap.h>
 #include <lgk/util.h>
 
 static const int g_shuffled[] = {5, -3, 8, 0, 42, -3, 17, 1, -100, 9};
+
+/* HEAP_PUSHPOP is not part of the heap_int_* library API, so instantiate it locally */
+HEAP_STRUCT(test_heap_min, int, unsigned);
+HEAP_STRUCT(test_heap_max, int, unsigned);
+
+static int_fast8_t test_heap_min_compare(const int *restrict a, const int *restrict b) [[unsequenced]]
+{
+    return (*a >= *b) - (*a <= *b);
+}
+
+static int_fast8_t test_heap_max_compare(const int *restrict a, const int *restrict b) [[unsequenced]]
+{
+    return (*a <= *b) - (*a >= *b);
+}
+
+HEAP_HELPERS_STATIC(test_heap_min)
+static HEAP_INIT(test_heap_min)
+static HEAP_PUSH(test_heap_min)
+static HEAP_POP(test_heap_min)
+static HEAP_PUSHPOP(test_heap_min)
+
+HEAP_HELPERS_STATIC(test_heap_max)
+static HEAP_INIT(test_heap_max)
+static HEAP_PUSH(test_heap_max)
+static HEAP_POP(test_heap_max)
+static HEAP_PUSHPOP(test_heap_max)
 
 static void test_init(void)
 {
@@ -250,6 +277,107 @@ static void test_interleaved_push_pop(void)
     test_assert(h.used == 0);
 }
 
+static void test_pushpop_empty(void)
+{
+    static int buffer[4];
+    struct test_heap_min h;
+    int item = -1;
+
+    test_assert(test_heap_min_init(&h, buffer, ASIZE(buffer)) == 0);
+
+    /* on an empty heap the pushed item comes straight back out */
+    test_assert(test_heap_min_pushpop(&h, &(int){5}, &item) == 0);
+    test_assert(item == 5);
+    test_assert(h.used == 0);
+}
+
+static void test_pushpop_replace_root(void)
+{
+    static int buffer[4];
+    static const int initial[] = {10, 20, 30, 40};
+    static const int expected[] = {20, 25, 30, 40};
+    struct test_heap_min h;
+    int item;
+
+    test_assert(test_heap_min_init(&h, buffer, ASIZE(buffer)) == 0);
+    for (unsigned i = 0; i < ASIZE(initial); i++)
+        test_assert(test_heap_min_push(&h, &initial[i]) == 0);
+    test_assert(h.used == h.size);
+
+    /* smaller than the root: returned directly, heap untouched (works on a full heap) */
+    item = -1;
+    test_assert(test_heap_min_pushpop(&h, &(int){5}, &item) == 0);
+    test_assert(item == 5);
+    test_assert(h.used == ASIZE(initial));
+    test_assert(h.buffer[0] == 10);
+
+    /* equal to the root: returned directly as well */
+    item = -1;
+    test_assert(test_heap_min_pushpop(&h, &(int){10}, &item) == 0);
+    test_assert(item == 10);
+    test_assert(h.used == ASIZE(initial));
+    test_assert(h.buffer[0] == 10);
+
+    /* larger than the root: the root comes out, the item takes its place and sinks */
+    item = -1;
+    test_assert(test_heap_min_pushpop(&h, &(int){25}, &item) == 0);
+    test_assert(item == 10);
+    test_assert(h.used == ASIZE(initial));
+
+    for (unsigned i = 0; i < ASIZE(expected); i++) {
+        item = -1;
+        test_assert(test_heap_min_pop(&h, &item) == 0);
+        test_assert(item == expected[i]);
+    }
+    test_assert(h.used == 0);
+}
+
+static void test_pushpop_top_k(void)
+{
+    static int buffer_min[3];
+    static int buffer_max[3];
+    static const int largest_asc[] = {9, 17, 42};
+    static const int smallest_desc[] = {-3, -3, -100};
+    struct test_heap_min hmin;
+    struct test_heap_max hmax;
+    int item;
+
+    /* a full min-heap fed through pushpop retains the k largest items seen,
+       and every item pushed out is <= everything retained */
+    test_assert(test_heap_min_init(&hmin, buffer_min, ASIZE(buffer_min)) == 0);
+    test_assert(test_heap_max_init(&hmax, buffer_max, ASIZE(buffer_max)) == 0);
+    for (unsigned i = 0; i < ASIZE(g_shuffled); i++) {
+        if (hmin.used < hmin.size) {
+            test_assert(test_heap_min_push(&hmin, &g_shuffled[i]) == 0);
+            test_assert(test_heap_max_push(&hmax, &g_shuffled[i]) == 0);
+            continue;
+        }
+
+        item = 0;
+        test_assert(test_heap_min_pushpop(&hmin, &g_shuffled[i], &item) == 0);
+        test_assert(hmin.used == hmin.size);
+        for (unsigned i_heap = 0; i_heap < hmin.used; i_heap++)
+            test_assert(item <= hmin.buffer[i_heap]);
+
+        item = 0;
+        test_assert(test_heap_max_pushpop(&hmax, &g_shuffled[i], &item) == 0);
+        test_assert(hmax.used == hmax.size);
+        for (unsigned i_heap = 0; i_heap < hmax.used; i_heap++)
+            test_assert(item >= hmax.buffer[i_heap]);
+    }
+
+    for (unsigned i = 0; i < ASIZE(largest_asc); i++) {
+        item = 0;
+        test_assert(test_heap_min_pop(&hmin, &item) == 0);
+        test_assert(item == largest_asc[i]);
+    }
+    for (unsigned i = 0; i < ASIZE(smallest_desc); i++) {
+        item = 0;
+        test_assert(test_heap_max_pop(&hmax, &item) == 0);
+        test_assert(item == smallest_desc[i]);
+    }
+}
+
 int main(void)
 {
     test_init();
@@ -258,5 +386,8 @@ int main(void)
     test_full_and_empty();
     test_duplicates();
     test_interleaved_push_pop();
+    test_pushpop_empty();
+    test_pushpop_replace_root();
+    test_pushpop_top_k();
     return 0;
 }
