@@ -14,7 +14,7 @@
   */
 
 #define FSM_TYPES(name, type_context, type_state, type_event, type_event_data)\
-    ASSERT_SIGNED(type_state);\
+    static_assert(IS_SIGNED(type_state));\
     typedef type_state name##_enter_handler(type_context context, type_state state);\
     typedef type_state name##_event_handler(type_context context, type_state state, type_event event, type_event_data event_data);\
     struct name\

@@ -1,4 +1,4 @@
-set(LGK_TESTS thread fdset_input fifoq_int fifo_int heap_int prioq_int threadpool time_ms bitmap atomic_bitmap atomic_widest_lockfree fsm)
+set(LGK_TESTS thread fdset_input fifoq_int fifo_int heap_int prioq_int threadpool time_ms bitmap bitmap_atomic atomic_lockfree_intmax fsm)
 
 foreach(name IN LISTS LGK_TESTS)
     add_executable(test_${name} test_${name}.c)

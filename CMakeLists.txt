@@ -33,9 +33,9 @@ target_sources(libgorak PUBLIC
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
     FILES
         include/lgk/array.h
-        include/lgk/atomic_bitmap.h
-        include/lgk/atomic_widest_lockfree.h
+        include/lgk/atomic_lockfree_intmax.h
         include/lgk/bitmap.h
+        include/lgk/bitmap_atomic.h
         include/lgk/char.h
         include/lgk/date.h
         include/lgk/fd.h

@@ -27,13 +27,12 @@
 
 #define INTDIVCEIL(i, d) (((i)+(d)-1)/(d))
 
-// Value width (in bits) of a standard unsigned integer type, as an integer constant expression.
-// Any other type is a compile error: the association list itself rejects bool, every signed type,
-// unsigned _BitInt(N) and extended integer types. typeof_unqual strips _Atomic/const/volatile, so
-// UWIDTH(_Atomic(unsigned)) is UINT_WIDTH.
-// This is the value width, NOT sizeof(type)*CHAR_BIT: a padded type has fewer value bits than it
-// occupies. Use sizeof for storage strides and UWIDTH for bit counts.
-#define UWIDTH(type) _Generic((typeof_unqual(type)){},\
+#define BITWIDTH(type) _Generic((typeof_unqual(type)){},\
+    char: CHAR_WIDTH,\
+    short: SHRT_WIDTH,\
+    int: INT_WIDTH,\
+    long: LONG_WIDTH,\
+    long long: LLONG_WIDTH,\
     unsigned char: UCHAR_WIDTH,\
     unsigned short: USHRT_WIDTH,\
     unsigned int: UINT_WIDTH,\
@@ -42,11 +41,16 @@
 
 // 1 iff type is exactly _Atomic of its own unqualified base, else 0. _Generic strips _Atomic from
 // its controlling *value* but not from a pointer's target type, so the comparison is done on
-// pointers. Needs no <stdatomic.h>, since _Atomic is a keyword.
-// const/volatile-qualified atomics yield 0.
-#define IS_ATOMIC_TYPE(type) _Generic((type *)nullptr, _Atomic(typeof_unqual(type)) *: 1, default: 0)
+// pointers.
+#define IS_ATOMIC_TYPE(type) _Generic((type *){},\
+        _Atomic typeof_unqual(type) *: 1,\
+        _Atomic const typeof_unqual(type) *: 1,\
+        _Atomic volatile typeof_unqual(type) *: 1,\
+        _Atomic const volatile typeof_unqual(type) *: 1,\
+        default: 0)
 
-#define ASSERT_SIGNED(type) static_assert(((type)-1)<0)
+#define IS_SIGNED(type) (((typeof_unqual(type))-1)<0)
+#define IS_UNSIGNED(type) (((typeof_unqual(type))-1)>0)
 
 #define SSIZEOF(structname, member) sizeof((struct structname){}.member)
 #define STYPEOF(structname, member) typeof((struct structname){}.member)
