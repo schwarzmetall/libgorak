@@ -8,6 +8,9 @@
 #include <lgk/time_ms.h>
 #include <lgk/threads.h>
 
+// TODO: don't return threads.h enum error codes - switch to common contract (0:OK, <0: critical failure, >0: partial failure) and use int_fast8_t return type
+// not changing now because bikebox will need to be adapted
+
 #define QUEUE_STRUCT(name, container)\
     struct name\
     {\
@@ -256,5 +259,7 @@
     trap_q_null:\
         return thrd_error;\
     }
+
+//TODO: QUEUE_PEEK: 
 
 #endif

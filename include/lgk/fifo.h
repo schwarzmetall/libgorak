@@ -2,6 +2,7 @@
 #define LGK_FIFO_H
 
 #include <string.h>
+#include <stdint.h>
 #include <lgk/tnt.h>
 
 #define FIFO_STRUCT(name, type_data, type_size)\
@@ -14,72 +15,72 @@
         type_size i_read;\
     }
 
-#define FIFO_INIT_HEADER(name) int name##_init(struct name *rb, typeof(rb->buffer) buffer, typeof(rb->size) size)
+#define FIFO_INIT_HEADER(name) int_fast8_t name##_init(struct name *fifo, typeof(fifo->buffer) buffer, typeof(fifo->size) size)
 #define FIFO_INIT(name)\
     FIFO_INIT_HEADER(name)\
     {\
-        TRAPVNULL(rb);\
-        rb->buffer = buffer;\
-        rb->size = size;\
-        rb->used = rb->i_read = rb->i_write = 0;\
+        TRAPVNULL(fifo);\
+        fifo->buffer = buffer;\
+        fifo->size = size;\
+        fifo->used = fifo->i_read = fifo->i_write = 0;\
         return 0;\
-    trap_rb_null:\
+    trap_fifo_null:\
         return -1;\
     }
 
-#define FIFO_INIT_PREFILLED_HEADER(name) int name##_init_prefilled(struct name *rb, typeof(rb->buffer) buffer, typeof(rb->size) size, typeof(rb->used) used)
+#define FIFO_INIT_PREFILLED_HEADER(name) int_fast8_t name##_init_prefilled(struct name *fifo, typeof(fifo->buffer) buffer, typeof(fifo->size) size, typeof(fifo->used) used)
 #define FIFO_INIT_PREFILLED(name)\
     FIFO_INIT_PREFILLED_HEADER(name)\
     {\
-        TRAPVNULL(rb);\
+        TRAPVNULL(fifo);\
         TRAP(used>size, used, "used > size");\
-        int status = name##_init(rb, buffer, size);\
+        int status = name##_init(fifo, buffer, size);\
         TRAPF(status, name##_init, status, "i");\
-        rb->used = used;\
-        if(used<size) rb->i_write = used;\
+        fifo->used = used;\
+        if(used<size) fifo->i_write = used;\
         return status;\
     trap_##name##_init:\
         return status;\
     trap_used:\
-    trap_rb_null:\
+    trap_fifo_null:\
         return -1;\
     }
 
-#define FIFO_PUSH_HEADER(name) int name##_push(struct name *rb, const typeof(*rb->buffer) *restrict item)
+#define FIFO_PUSH_HEADER(name) int_fast8_t name##_push(struct name *fifo, const typeof(*fifo->buffer) *restrict item)
 #define FIFO_PUSH(name)\
     FIFO_PUSH_HEADER(name)\
     {\
-        TRAPVNULL(rb);\
-        if(rb->used == rb->size) return 1;\
-        TRAPXXGTE(rb->i_write, rb->size, i_write, size, "u");\
-        TRAPXNULL(rb->buffer, buffer);\
-        rb->buffer[rb->i_write++] = *item;\
-        if(rb->i_write == rb->size) rb->i_write = 0;\
-        rb->used++;\
+        TRAPVNULL(fifo);\
+        if(fifo->used == fifo->size) return 1;\
+        TRAPXXGTE(fifo->i_write, fifo->size, i_write, size, "u");\
+        TRAPXNULL(fifo->buffer, buffer);\
+        fifo->buffer[fifo->i_write++] = *item;\
+        if(fifo->i_write == fifo->size) fifo->i_write = 0;\
+        fifo->used++;\
         return 0;\
     trap_buffer_null:\
     trap_i_write_gte_size:\
-    trap_rb_null:\
+    trap_fifo_null:\
         return -1;\
     }
 
-#define FIFO_POP_HEADER(name) int name##_pop(struct name *rb, typeof(*rb->buffer) *item)
+#define FIFO_POP_HEADER(name) int_fast8_t name##_pop(struct name *fifo, typeof(*fifo->buffer) *item)
 #define FIFO_POP(name)\
     FIFO_POP_HEADER(name)\
     {\
-        TRAPVNULL(rb);\
+        TRAPVNULL(fifo);\
         TRAPVNULL(item);\
-        if(!rb->used) return 1;\
-        TRAPXXGTE(rb->i_read, rb->size, i_read, size, "u");\
-        TRAPXNULL(rb->buffer, buffer);\
-        *item = rb->buffer[rb->i_read++];\
-        if(rb->i_read == rb->size) rb->i_read = 0;\
-        rb->used--;\
+        if(!fifo->used) return 1;\
+        TRAPXXGTE(fifo->i_read, fifo->size, i_read, size, "u");\
+        TRAPXNULL(fifo->buffer, buffer);\
+        *item = fifo->buffer[fifo->i_read++];\
+        if(fifo->i_read == fifo->size) fifo->i_read = 0;\
+        fifo->used--;\
         return 0;\
     trap_buffer_null:\
     trap_i_read_gte_size:\
     trap_item_null:\
-    trap_rb_null:\
+    trap_fifo_null:\
         return -1;\
     }
 
@@ -88,54 +89,54 @@
  * INT_MAX, this cast silently truncates/wraps. Unlikely in practice (queue/ring buffer sizes
  * are not expected to approach INT_MAX items), but worth revisiting if `type_size` is ever
  * instantiated with a wide type or very large capacities. */
-#define FIFO_WRITE_HEADER(name) int name##_write(struct name *rb, const typeof(*rb->buffer) *items, typeof(rb->size) count)
+#define FIFO_WRITE_HEADER(name) int_fast8_t name##_write(struct name *fifo, const typeof(*fifo->buffer) *items, typeof(fifo->size) count)
 #define FIFO_WRITE(name)\
     FIFO_WRITE_HEADER(name)\
     {\
         if(!count) return 0;\
-        TRAPVNULL(rb);\
+        TRAPVNULL(fifo);\
         TRAPVNULL(items);\
-        TRAPXNULL(rb->buffer, buffer);\
-        typeof(rb->size) available = rb->size - rb->used;\
-        typeof(rb->size) n = (count < available) ? count : available;\
-        typeof(rb->size) to_end = rb->size - rb->i_write;\
-        typeof(rb->size) first = (n < to_end) ? n : to_end;\
-        memcpy(&rb->buffer[rb->i_write], items, first * sizeof(*rb->buffer));\
-        typeof(rb->size) second = n - first;\
-        if(second) memcpy(rb->buffer, items + first, second * sizeof(*rb->buffer));\
-        rb->i_write += n;\
-        if(rb->i_write >= rb->size) rb->i_write -= rb->size;\
-        rb->used += n;\
+        TRAPXNULL(fifo->buffer, buffer);\
+        typeof(fifo->size) available = fifo->size - fifo->used;\
+        typeof(fifo->size) n = (count < available) ? count : available;\
+        typeof(fifo->size) to_end = fifo->size - fifo->i_write;\
+        typeof(fifo->size) first = (n < to_end) ? n : to_end;\
+        memcpy(&fifo->buffer[fifo->i_write], items, first * sizeof(*fifo->buffer));\
+        typeof(fifo->size) second = n - first;\
+        if(second) memcpy(fifo->buffer, items + first, second * sizeof(*fifo->buffer));\
+        fifo->i_write += n;\
+        if(fifo->i_write >= fifo->size) fifo->i_write -= fifo->size;\
+        fifo->used += n;\
         return (int)n;\
     trap_buffer_null:\
     trap_items_null:\
-    trap_rb_null:\
+    trap_fifo_null:\
         return -1;\
     }
 
 /* TODO: same caveat as FIFO_WRITE - `(int)n` can silently truncate/wrap if `type_size`
  * is wide enough and `count`/`used` exceeds INT_MAX. Unlikely, but worth revisiting. */
-#define FIFO_READ_HEADER(name) int name##_read(struct name *rb, typeof(*rb->buffer) *items, typeof(rb->size) count)
+#define FIFO_READ_HEADER(name) int_fast8_t name##_read(struct name *fifo, typeof(*fifo->buffer) *items, typeof(fifo->size) count)
 #define FIFO_READ(name)\
     FIFO_READ_HEADER(name)\
     {\
         if(!count) return 0;\
-        TRAPVNULL(rb);\
+        TRAPVNULL(fifo);\
         TRAPVNULL(items);\
-        TRAPXNULL(rb->buffer, buffer);\
-        typeof(rb->size) n = (count < rb->used) ? count : rb->used;\
-        typeof(rb->size) to_end = rb->size - rb->i_read;\
-        typeof(rb->size) first = (n < to_end) ? n : to_end;\
-        memcpy(items, &rb->buffer[rb->i_read], first * sizeof(*rb->buffer));\
-        typeof(rb->size) second = n - first;\
-        if(second) memcpy(items + first, rb->buffer, second * sizeof(*rb->buffer));\
-        rb->i_read += n;\
-        if(rb->i_read >= rb->size) rb->i_read -= rb->size;\
-        rb->used -= n;\
+        TRAPXNULL(fifo->buffer, buffer);\
+        typeof(fifo->size) n = (count < fifo->used) ? count : fifo->used;\
+        typeof(fifo->size) to_end = fifo->size - fifo->i_read;\
+        typeof(fifo->size) first = (n < to_end) ? n : to_end;\
+        memcpy(items, &fifo->buffer[fifo->i_read], first * sizeof(*fifo->buffer));\
+        typeof(fifo->size) second = n - first;\
+        if(second) memcpy(items + first, fifo->buffer, second * sizeof(*fifo->buffer));\
+        fifo->i_read += n;\
+        if(fifo->i_read >= fifo->size) fifo->i_read -= fifo->size;\
+        fifo->used -= n;\
         return (int)n;\
     trap_buffer_null:\
     trap_items_null:\
-    trap_rb_null:\
+    trap_fifo_null:\
         return -1;\
     }
 
