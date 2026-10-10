@@ -1,10 +1,16 @@
-#include <stddef.h>
-#include <stdint.h>
 #include <threads.h>
 #include <lgk/tnt.h>
 #include <lgk/threads.h>
-#include <lgk/fifoq_int.h>
 #include <lgk/threadpool.h>
+
+static FIFO_INIT(fifo_threadpool_work)
+static FIFO_PUSH(fifo_threadpool_work)
+static FIFO_POP(fifo_threadpool_work)
+
+static QUEUE_INIT(fifoq_threadpool_work, fifo_threadpool_work)
+static QUEUE_CLOSE(fifoq_threadpool_work, fifo_threadpool_work)
+static QUEUE_PUSH(fifoq_threadpool_work, fifo_threadpool_work)
+static QUEUE_POP(fifoq_threadpool_work, fifo_threadpool_work)
 
 static int worker_thread_function(void *data)
 {
@@ -12,20 +18,16 @@ static int worker_thread_function(void *data)
     int status = thrd_success;
     while(status==thrd_success)
     {
-        int i_work = -1;
-        int status_pop = fifoq_int_pop(&tp->work_queue, &i_work, tp->queue_timeout_ms);
+        struct threadpool_work work = {};
+        int status_pop = fifoq_threadpool_work_pop(&tp->work_queue, &work, tp->queue_timeout_ms);
         if(status_pop == thrd_timedout) continue;
         status = status_pop;
-        TRAPFT(status_pop!=thrd_success, fifoq_int_pop, status);
-        if(i_work < 0) break;
-        struct threadpool_work *work = tp->work_buffer + i_work;
-        work->done_callback(work->data, work->start(work->data));
-        status = fifoq_int_push(&tp->work_pool, &i_work, tp->queue_timeout_ms);
-        TRAPFT(status!=thrd_success, fifoq_int_push, status);
+        TRAPFT(status_pop!=thrd_success, fifoq_threadpool_work_pop, status);
+        if(work.start == NULL) break;
+        work.done_callback(work.data, work.start(work.data));
     }
     return status;
-trap_fifoq_int_push:
-trap_fifoq_int_pop:
+trap_fifoq_threadpool_work_pop:
     return status;
 }
 
@@ -33,13 +35,14 @@ static int threadpool_signal_and_join_workers(struct threadpool *tp, unsigned n_
 {
     TRAPVNULL(tp);
     int status = thrd_success;
+    struct threadpool_work shutdown_work = {};
     for(unsigned i = 0; i < n_threads; i++)
     {
-        int status_push = fifoq_int_push(&tp->work_queue, &(int){-1}, tp->queue_timeout_ms);
+        int status_push = fifoq_threadpool_work_push(&tp->work_queue, &shutdown_work, tp->queue_timeout_ms);
         if(status_push != thrd_success)
         {
             if(status == thrd_success) status = status_push;
-            CRITFT(fifoq_int_push, status_push);
+            CRITFT(fifoq_threadpool_work_push, status_push);
         }
     }
     for(unsigned i = 0; i < n_threads; i++)
@@ -62,46 +65,35 @@ trap_tp_null:
     return thrd_error;
 }
 
-int threadpool_init(struct threadpool *tp, const struct threadpool_buffer_info *buffer_info, unsigned n_threads, unsigned pool_size, int_fast8_t timed_join, int queue_timeout_ms)
+int threadpool_init(struct threadpool *tp, struct lgk_thread *thread_buffer, struct threadpool_work *queue_buffer, unsigned n_threads, unsigned queue_size, int_fast8_t timed_join, int queue_timeout_ms)
 {
     TRAPVNULL(tp);
-    TRAPVNULL(buffer_info);
-    unsigned queue_size = pool_size - n_threads;
-    if(pool_size <= n_threads)
-    {
-        ERR("pool_size==%u <= n_threads==%u, using dummy queue of size 1", pool_size, n_threads);
-	queue_size = 1;
-    }
+    TRAPVNULL(thread_buffer);
+    TRAPVNULL(queue_buffer);
     tp->queue_timeout_ms = queue_timeout_ms;
     int status = lgk_monitor_init(&tp->monitor, timed_join);
     TRAPFT(status!=thrd_success, lgk_monitor_init, status);
-    status = fifoq_int_init(&tp->work_queue, buffer_info->work_queue_buffer, queue_size, (queue_timeout_ms>=0));
-    TRAPFT(status!=thrd_success, fifoq_int_init, status);
-    for(unsigned i=0; i<pool_size; i++) buffer_info->work_pool_buffer[i] = i;
-    status = fifoq_int_init_prefilled(&tp->work_pool, buffer_info->work_pool_buffer, pool_size, pool_size, (queue_timeout_ms>=0));
-    TRAPFT(status!=thrd_success, fifoq_int_init_prefilled, status);
+    status = fifoq_threadpool_work_init(&tp->work_queue, queue_buffer, queue_size, (queue_timeout_ms>=0));
+    TRAPFT(status!=thrd_success, fifoq_threadpool_work_init, status);
     unsigned n_threads_created = 0;
-    while((n_threads_created < n_threads) && (status==thrd_success)) status = lgk_thread_create(&buffer_info->thread_buffer[n_threads_created++], worker_thread_function, tp, &tp->monitor);
+    while((n_threads_created < n_threads) && (status==thrd_success)) status = lgk_thread_create(&thread_buffer[n_threads_created++], worker_thread_function, tp, &tp->monitor);
     TRAPFT(status!=thrd_success, lgk_thread_create, status);
     tp->n_threads = n_threads;
-    tp->pool_size = pool_size;
-    tp->thread_buffer = buffer_info->thread_buffer;
-    tp->work_buffer = buffer_info->work_buffer;
+    tp->queue_size = queue_size;
+    tp->thread_buffer = thread_buffer;
     return thrd_success;
 trap_lgk_thread_create:
     int status_cleanup = threadpool_signal_and_join_workers(tp, n_threads_created, tp->queue_timeout_ms, 1);
     if(status_cleanup != thrd_success) CRITFT(threadpool_signal_and_join_workers, status_cleanup);
-    status_cleanup = fifoq_int_close(&tp->work_pool);
-    if(status_cleanup != thrd_success) CRITFT(fifoq_int_close, status_cleanup);
-trap_fifoq_int_init_prefilled:
-    status_cleanup = fifoq_int_close(&tp->work_queue);
-    if(status_cleanup != thrd_success) CRITFT(fifoq_int_close, status_cleanup);
-trap_fifoq_int_init:
+    status_cleanup = fifoq_threadpool_work_close(&tp->work_queue);
+    if(status_cleanup != thrd_success) CRITFT(fifoq_threadpool_work_close, status_cleanup);
+trap_fifoq_threadpool_work_init:
     status_cleanup = lgk_monitor_destroy(&tp->monitor);
     if(status_cleanup != thrd_success) CRITFT(lgk_monitor_destroy, status_cleanup);
 trap_lgk_monitor_init:
     return status;
-trap_buffer_info_null:
+trap_queue_buffer_null:
+trap_thread_buffer_null:
 trap_tp_null:
     return thrd_error;
 }
@@ -112,16 +104,10 @@ int threadpool_close(struct threadpool *tp, int join_timeout_ms, int_fast8_t tim
     int status = threadpool_signal_and_join_workers(tp, tp->n_threads, join_timeout_ms, timeout_detach);
     int status_cleanup = lgk_monitor_destroy(&tp->monitor);
     if(status_cleanup != thrd_success) CRITFT(lgk_monitor_destroy, status_cleanup);
-    status_cleanup = fifoq_int_close(&tp->work_queue);
+    status_cleanup = fifoq_threadpool_work_close(&tp->work_queue);
     if(status_cleanup != thrd_success)
     {
-        CRITFT(fifoq_int_close, status_cleanup);
-        if(status == thrd_success) status = status_cleanup;
-    }
-    status_cleanup = fifoq_int_close(&tp->work_pool);
-    if(status_cleanup != thrd_success)
-    {
-        CRITFT(fifoq_int_close, status_cleanup);
+        CRITFT(fifoq_threadpool_work_close, status_cleanup);
         if(status == thrd_success) status = status_cleanup;
     }
     return status;
@@ -132,24 +118,19 @@ trap_tp_null:
 int threadpool_schedule_work(struct threadpool *tp, thrd_start_t start, threadpool_work_done_callback *work_done_cb, void *work_data)
 {
     TRAPVNULL(tp);
-    int i_work = -1;
-    int status = fifoq_int_pop(&tp->work_pool, &i_work, tp->queue_timeout_ms);
-    TRAPFT(status!=thrd_success, fifoq_int_pop, status);
-    TRAP((i_work<0)||((unsigned)i_work>=tp->pool_size), i_work_out_of_bounds, "i_work==%i", i_work);
-    struct threadpool_work *work = tp->work_buffer + i_work;
-    work->start = start;
-    work->done_callback = work_done_cb;
-    work->data = work_data;
-    status = fifoq_int_push(&tp->work_queue, &i_work, tp->queue_timeout_ms);
-    TRAPFT(status!=thrd_success, fifoq_int_push, status);
+    TRAPVNULL(start);
+    const struct threadpool_work work =
+    {
+        start,
+        work_done_cb,
+        work_data
+    };
+    int status = fifoq_threadpool_work_push(&tp->work_queue, &work, tp->queue_timeout_ms);
+    TRAPFT(status!=thrd_success, fifoq_threadpool_work_push, status);
     return thrd_success;
-trap_i_work_out_of_bounds:
-    status = thrd_error;
-trap_fifoq_int_push:
-    int status_push_pool = fifoq_int_push(&tp->work_pool, &i_work, tp->queue_timeout_ms);
-    if(status_push_pool != thrd_success) CRITFT(fifoq_int_push, status_push_pool);
-trap_fifoq_int_pop:
+trap_fifoq_threadpool_work_push:
     return status;
+trap_start_null:
 trap_tp_null:
     return thrd_error;
 }
